@@ -1,0 +1,12 @@
+#case data
+Xcg: 0.5
+Ycg: 0
+Zcg: 0
+mass: 10
+velocity: 20
+
+alpha0: 0
+alpha1: 10
+increment: 1
+
+threads: 8

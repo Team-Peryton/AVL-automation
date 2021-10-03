@@ -1,0 +1,134 @@
+# 
+# Note : check consistency of area unit and length units in this file
+# Note : check consistency with inertia units of the .mass file
+# 
+# 
+aria3
+0.0                                 | Mach
+0     0     0.0                     | iYsym  iZsym  Zsym
+780000.00000   312.00000   2500.00000   | Sref   Cref   Bref
+491.61084     0.00000     0.00000   | Xref   Yref   Zref
+ 0.00                               | CDp  (optional)
+
+
+
+#========TODO: REMOVE OR MODIFY MANUALLY DUPLICATE SECTIONS IN SURFACE DEFINITION=========
+SURFACE                      | (keyword)
+Main Wing
+#Nchord    Cspace   [ Nspan Sspace ]
+13        1.0
+
+INDEX                        | (keyword)
+  41                         | Lsurf
+
+YDUPLICATE
+0.0
+
+SCALE
+1.0  1.0  1.0
+
+TRANSLATE
+0.0  0.0  0.0
+
+ANGLE
+   0.000                         | dAinc
+
+
+#____PANEL 1_______
+#______________
+SECTION                                                     |  (keyword)
+ 373.2470    0.0000    0.0000  312.0000   0.000   19    -2   | Xle Yle Zle   Chord Ainc   [ Nspan Sspace ]
+
+AFIL 0.0 1.0
+NACA 2412.dat
+
+
+#______________
+SECTION                                                     |  (keyword)
+ 373.2470 1250.0000    0.0000  312.0000   0.000   19    -2   | Xle Yle Zle   Chord Ainc   [ Nspan Sspace ]
+
+AFIL 0.0 1.0
+NACA 2412.dat
+
+
+
+
+#========TODO: REMOVE OR MODIFY MANUALLY DUPLICATE SECTIONS IN SURFACE DEFINITION=========
+SURFACE                      | (keyword)
+Elevator
+#Nchord    Cspace   [ Nspan Sspace ]
+7        1.0
+
+INDEX                        | (keyword)
+  43                         | Lsurf
+
+YDUPLICATE
+0.0
+
+SCALE
+1.0  1.0  1.0
+
+TRANSLATE
+0.0  0.0  0.0
+
+ANGLE
+  -1.000                         | dAinc
+
+
+#____PANEL 1_______
+#______________
+SECTION                                                     |  (keyword)
+1556.2570    0.0000    0.0000  150.0000   0.000    7    -2   | Xle Yle Zle   Chord Ainc   [ Nspan Sspace ]
+
+AFIL 0.0 1.0
+NACA 0012H.dat
+
+
+#______________
+SECTION                                                     |  (keyword)
+1556.2570  390.0000    0.0000  150.0000   0.000    7    -2   | Xle Yle Zle   Chord Ainc   [ Nspan Sspace ]
+
+AFIL 0.0 1.0
+NACA 0012H.dat
+
+
+
+
+#========TODO: REMOVE OR MODIFY MANUALLY DUPLICATE SECTIONS IN SURFACE DEFINITION=========
+SURFACE                      | (keyword)
+Fin
+#Nchord    Cspace   [ Nspan Sspace ]
+7        1.0
+
+INDEX                        | (keyword)
+  44                         | Lsurf
+
+SCALE
+1.0  1.0  1.0
+
+TRANSLATE
+0.0  0.0  0.0
+
+ANGLE
+   0.000                         | dAinc
+
+
+#____PANEL 1_______
+#______________
+SECTION                                                     |  (keyword)
+1506.2410   -0.0000  350.0000  200.0000   0.000    7    2   | Xle Yle Zle   Chord Ainc   [ Nspan Sspace ]
+
+AFIL 0.0 1.0
+NACA 0012H.dat
+
+
+#______________
+SECTION                                                     |  (keyword)
+1506.2410    0.0000    0.0000  200.0000   0.000    7    2   | Xle Yle Zle   Chord Ainc   [ Nspan Sspace ]
+
+AFIL 0.0 1.0
+NACA 0012H.dat
+
+
+
+
