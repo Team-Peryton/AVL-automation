@@ -43,18 +43,14 @@ def run(input_file):
     ref_plane_geom,ref_plane=make_ref_plane(plane_geom,mac,span,inputs["span_loc"],inputs["wing_aerofoil"])
 
     planes=generate_planes(ref_plane_geom,inputs["angle_min"],inputs["angle_max"],inputs["increment"],inputs["span_loc"],span,ref_plane,mac,inputs["wing_aerofoil"])
+    analysis=Aero(inputs["aero_config"])
+    cases=[case for case in analysis.initialize_cases()]    #   Generates & writes cases
     
-    tasks=[(plane,inputs["aero_config"]) for plane in planes]
-   
-    with ProcessPoolExecutor(max_workers=8) as pool:
-        pool.map(analysis,tasks)
-    """
-    for task in tasks:
-        analysis(task)
-    
+    tasks=[(plane,case,analysis) for plane in planes for case in cases] 
     with ThreadPoolExecutor(max_workers=inputs["threads"]) as pool:
-        pool.map(analysis,tasks)
-    """
+        pool.map(run_analysis,tasks)
+
+    pass
 
 def make_ref_plane(plane_geom:list,mac,span,span_loc,wing_aerofoil)->tuple:
     ref_plane=Plane("reference",mac=mac)
@@ -96,17 +92,23 @@ def generate_planes(ref_plane_geom:list,angle_min,angle_max,increment,span_loc,s
         count+=1
 
         planes.append(plane)
+        plane.results_file=list()
 
     print("Planes generated...")
     return(planes)
 
-def analysis(tasks):
-    plane,aero_config=tasks
-    analysis=Aero(aero_config,plane.geom_file)
-    analysis.run()
+def run_analysis(tasks):
+    plane,case,analysis=tasks
+    analysis.plane_file=plane
+    
+    result=analysis.run_analysis(plane,case)
+    plane.results_file.append(result)
+    
+    pass
+    #df=pd.DataFrame(analysis.polars,columns=["Alpha (deg)","Cl","Cd"])
 
-    df=pd.DataFrame(analysis.polars,columns=["Alpha (deg)","Cl","Cd"])
-    print(df)
+def results(plane,analysis):
+    analysis.results(plane)
 
 def plot(alpha:list,lift:list,drag:list):
     plt.figure(figsize=(10, 4))
