@@ -25,7 +25,8 @@ def load_inputs(input_file):
             "angle_max":float(lines[10].split()[1]),
             "increment":int(lines[11].split()[1]),
             "span_loc":float(lines[13].split()[1]),
-            "threads":float(lines[15].split()[1])}
+            "threads":float(lines[15].split()[1])
+            }
 
     return inputs
 
@@ -54,19 +55,23 @@ def run(input_file):
 
     print("Polar analysis...")
     with ThreadPoolExecutor(max_workers=inputs["threads"]) as pool:
-        list(tqdm(pool.map(run_aero,tasks),total=len(tasks)))
+        list(tqdm(pool.map(run_analysis,tasks),total=len(tasks)))
 
     print("Reading polar results...")
     polars(planes)
 
+    plot_polars(planes)
+
+    """
+    case.eigen=True
     tasks=(plane,analysis)
     print("Eigenmode analysis...")
     with ThreadPoolExecutor(max_workers=inputs["threads"]) as pool:
-        list(tqdm(pool.map(run_eigen,tasks),total=len(tasks)))
+        list(tqdm(pool.map(run_analysis,tasks),total=len(tasks)))
     
     print("Reading eigenmode results...")
     eigenvalues(planes)
-
+    """
     pass
 
 def make_ref_plane(plane_geom:list,mac,span,span_loc,wing_aerofoil)->tuple:
@@ -87,7 +92,7 @@ def generate_planes(ref_plane_geom:list,angle_min,angle_max,increment,span_loc,s
                                 angle_max,
                                 int(1+(angle_max-angle_min)/increment)):
 
-        name="".join([str(count),"-",str(angle),"Theta-",str(span_loc),"%"])
+        name="".join([str(count),"-",str(angle),"deg-",str(span_loc),"%"])
         plane=Plane(name)
         plane.d_theta=angle
 
@@ -116,20 +121,12 @@ def generate_planes(ref_plane_geom:list,angle_min,angle_max,increment,span_loc,s
     print("Planes generated...")
     return(planes)
 
-def run_aero(tasks):
+def run_analysis(tasks):
     time.sleep(0.001)
     plane,case,analysis=tasks
 
-    analysis.aero_analysis(plane,case)
+    analysis.analysis(plane,case)
     
-    pass
-
-def run_eigen(tasks):
-    time.sleep(0.001)
-    plane,case,analysis=tasks
-
-    analysis.eigen_analysis(plane,case)
-
     pass
 
 def polars(planes):
@@ -145,23 +142,21 @@ def polars(planes):
 def eigenvalues(planes):
     pass
 
-def plot(alpha:list,lift:list,drag:list):
+def plot_polars(planes):
     plt.figure(figsize=(10, 4))
-
-    plt.subplot(121)
+    plot1=plt.subplot(121)
     plt.xlabel("Alpha (deg)")
     plt.ylabel("Cl")
-    plt.plot(alpha, lift)
-    plt.subplot(122)
+    for plane in planes:
+        plane.polars.plot(ax=plot1,x="Alpha (deg)",y="Cl",label=plane.name)
+
+    plot2=plt.subplot(122)
     plt.xlabel("Alpha (deg)")
     plt.ylabel("Cd")
-    plt.plot(alpha, drag)
+    for plane in planes:
+        plane.polars.plot(ax=plot2,x="Alpha (deg)",y="Cd",label=plane.name)
+    
     plt.suptitle('Polars')
-
-    lift_polar=pd.DataFrame(data={'alpha':alpha,'lift':lift})
-    drag_polar=pd.DataFrame(data={'alpha':alpha,'drag (avl)':drag})
-    #lift_polar.to_excel("lift_polar.xlsx")
-    #drag_polar.to_excel("drag_polar.xlsx")
 
     plt.show()
 
@@ -178,5 +173,7 @@ if __name__=='__main__':
     os.mkdir(path+"/results")
 
     input_file="DIHEDRAL_CONFIG.txt"
+
+    plt.close("all")
 
     run(input_file)
