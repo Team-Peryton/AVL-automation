@@ -1,3 +1,4 @@
+from typing import Counter
 from avl_aero_coefficients import Aero
 from geometry import Plane,Section
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
@@ -9,6 +10,7 @@ import math
 import os
 import shutil
 import time
+from tqdm import tqdm
 
 def load_inputs(input_file):
     with open(input_file,'r') as f:
@@ -45,10 +47,33 @@ def run(input_file):
     planes=generate_planes(ref_plane_geom,inputs["angle_min"],inputs["angle_max"],inputs["increment"],inputs["span_loc"],span,ref_plane,mac,inputs["wing_aerofoil"])
     analysis=Aero(inputs["aero_config"])
     cases=[case for case in analysis.initialize_cases()]    #   Generates & writes cases
-    
-    tasks=[(plane,case,analysis) for plane in planes for case in cases] 
+    #cases is unique
+    tasks=[]
+    count=0
+    for plane in planes:
+        plane.cases=cases
+        for case in plane.cases:
+            case.id=count
+            count+=1
+            #count is unique
+            tasks.append([plane,case,analysis])
+            #tasks are unique
+
+    #tasks=[(plane,case,analysis) for plane in planes for case in cases]
+
+    print("Analysing...")
     with ThreadPoolExecutor(max_workers=inputs["threads"]) as pool:
+        #list(tqdm(pool.map(run_analysis,tasks),total=len(tasks)))
         pool.map(run_analysis,tasks)
+    """
+    for plane in planes:
+        print(plane.name)
+        for case in plane.cases:
+            print(case.results_file)
+"""
+    tasks=[plane for plane in planes]
+    with ThreadPoolExecutor(max_workers=inputs["threads"]) as pool:
+        pool.map(polars,tasks)
 
     pass
 
@@ -60,6 +85,7 @@ def make_ref_plane(plane_geom:list,mac,span,span_loc,wing_aerofoil)->tuple:
     return tuple(ref_plane_geom), ref_plane
 
 def generate_planes(ref_plane_geom:list,angle_min,angle_max,increment,span_loc,span,ref_plane,mac,aerofoil):
+    t0=time.time()
     planes=[]
     count=0
     hspan=span/2
@@ -98,17 +124,15 @@ def generate_planes(ref_plane_geom:list,angle_min,angle_max,increment,span_loc,s
     return(planes)
 
 def run_analysis(tasks):
+    #time.sleep(0.001)
     plane,case,analysis=tasks
-    analysis.plane_file=plane
-    
-    result=analysis.run_analysis(plane,case)
-    plane.results_file.append(result)
+    print(case.id)
+    analysis.analysis(plane,case)
     
     pass
-    #df=pd.DataFrame(analysis.polars,columns=["Alpha (deg)","Cl","Cd"])
 
-def results(plane,analysis):
-    analysis.results(plane)
+def polars(plane):
+    Aero.results(plane)
 
 def plot(alpha:list,lift:list,drag:list):
     plt.figure(figsize=(10, 4))
@@ -131,6 +155,7 @@ def plot(alpha:list,lift:list,drag:list):
     plt.show()
 
 if __name__=='__main__':
+    os.system('cls')
     freeze_support()
 
     path=os.path.abspath(os.getcwd())
@@ -143,6 +168,4 @@ if __name__=='__main__':
 
     input_file="DIHEDRAL_CONFIG.txt"
 
-    t0=time.time()
     run(input_file)
-    print(time.time()-t0)
