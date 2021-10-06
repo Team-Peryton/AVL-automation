@@ -11,7 +11,9 @@ class Plane:
                 mac:float=None,
                 ARt:float=None,
                 d_theta:float=None,
-                Xle:float=None
+                Xle:float=None,
+                cases:list=None,
+                polars=None
                 ):
 
         self.name=name
@@ -26,6 +28,8 @@ class Plane:
         self.ARt=ARt
         self.d_theta=d_theta
         self.Xle=Xle
+        self.cases=cases
+        self.polars=polars
     
     def make_reference(self,plane_geom:list)->list:
         if self.name=="reference":
