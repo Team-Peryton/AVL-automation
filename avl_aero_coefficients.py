@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor,ProcessPoolExecutor
 import time
 
 class Case():
-    def __init__(self,Xcg,Ycg,Zcg,mass,velocity,alpha,case_file=None,results_file=None,Cl=None,Cd=None):
+    def __init__(self,Xcg,Ycg,Zcg,mass,velocity,alpha,case_file=None,results_file=None,Cl=None,Cd=None,id=None):
         self.Xcg=Xcg
         self.Ycg=Ycg
         self.Zcg=Zcg
@@ -14,9 +14,10 @@ class Case():
         self.velocity=velocity
         self.alpha=alpha
         self.case_file=case_file
-        self.results_file=results_file
         self.Cl=Cl
         self.Cd=Cd
+        self.results_file=results_file
+        self.id=id
 
 ########################    INPUT & RUN    ##############################
 class Aero():
@@ -47,7 +48,7 @@ class Aero():
         #   Initiates class objects
         cases=[Case(self.inputs["Xcg"],self.inputs["Ycg"],self.inputs["Zcg"],self.inputs["mass"],self.inputs["velocity"],alpha) for alpha in alpha_range]
         
-        #   Writes case files
+        #   Writes case files & adds filepath to case obj
         tasks=[case for case in cases]
         with ThreadPoolExecutor(max_workers=self.inputs["threads"]) as pool:
             pool.map(self.case_create,tasks)
@@ -103,34 +104,36 @@ class Aero():
         case.case_file=path
         
     ### Runs analysis through AVL interface options & saves stability derivatives.
-    def run_analysis(self,plane,case)->str:
+    def analysis(self,plane,case)->str:
         """
         Runs analysis.
         """     
         run="load {0}\n".format(plane.geom_file)    #   Load plane
-
         run+="case {0}\n".format(case.case_file)  #   Load case
         run+="oper\n o\n v\n\n x\n"   #   Run analysis
         run+="ft\n" #   View stability derivatives
-        
+
         case.results_file="".join(["results/",plane.name[0],"-",str(case.alpha),"deg.txt"])
         
         run+=case.results_file+"\n"    #   Saves results
         
         self.issueCmd(run)
         
-        return case.results_file
-        #self.results()
+        #return case.results_file
 
     ########################    RESULTS    ##############################
 
-    def results(self,plane):
-        for case in plane.results_file:
-            with open(case,'r') as file:
+    def results(plane):
+        Cl_polar=tuple()
+        Cd_polar=tuple()
+        for result in plane.results_file:
+            with open(result,'r') as file:
                 lines=file.readlines()
 
-                case.Cl=float(lines[23].split()[2])
-                case.Cd=float(lines[24].split()[2])
+                Cl_polar.append(float(lines[23].split()[2]))
+                Cd_polar.append(float(lines[24].split()[2]))
 
-        polars=[(case.alpha,case.Cl,case.Cd) for case in self.cases]
-            
+        plane.Cl_polar=Cl_polar
+        plane.Cd_polar=Cd_polar
+        
+        pass
