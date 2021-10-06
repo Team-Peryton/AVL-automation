@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor,ProcessPoolExecutor
 import time
 
 class Case():
-    def __init__(self,Xcg,Ycg,Zcg,mass,velocity,alpha,case_file=None,results_file=None,Cl=None,Cd=None,id=None):
+    def __init__(self,Xcg,Ycg,Zcg,mass,velocity,alpha,case_file=None,results_file=None,Cl=None,Cd=None,freq=None,damp=None):
         self.Xcg=Xcg
         self.Ycg=Ycg
         self.Zcg=Zcg
@@ -17,7 +17,8 @@ class Case():
         self.Cl=Cl
         self.Cd=Cd
         self.results_file=results_file
-        self.id=id
+        #self.freq=freq
+        #self.damp=damp
 
 ########################    INPUT & RUN    ##############################
 class Aero():
@@ -104,36 +105,60 @@ class Aero():
         case.case_file=path
         
     ### Runs analysis through AVL interface options & saves stability derivatives.
-    def analysis(self,plane,case)->str:
+    def aero_analysis(self,plane,case)->str:
         """
-        Runs analysis.
+        Runs aero analysis.
+        """     
+        run="load {0}\n".format(plane.geom_file)    #   Load plane
+        run+="case {0}\n".format(case.case_file)  #   Load case
+        run+="mode\n N\n W\n"   #   Run eigenvalue analysis
+        case.results_file="".join(["results/",plane.name[0],"-",str(case.alpha),"deg"])       
+        run+=case.results_file+"\n"    #   Saves results
+        
+        self.issueCmd(run)
+
+        pass
+
+    def eigen_analysis(self,plane,case)->str:
+        """
+        Runs aero analysis.
         """     
         run="load {0}\n".format(plane.geom_file)    #   Load plane
         run+="case {0}\n".format(case.case_file)  #   Load case
         run+="oper\n o\n v\n\n x\n"   #   Run analysis
         run+="ft\n" #   View stability derivatives
-
-        case.results_file="".join(["results/",plane.name[0],"-",str(case.alpha),"deg.txt"])
-        
+        case.results_file="".join(["results/",plane.name[0],"-",str(case.alpha),"deg.txt"])       
         run+=case.results_file+"\n"    #   Saves results
         
         self.issueCmd(run)
-        
-        #return case.results_file
+
+        pass
 
     ########################    RESULTS    ##############################
 
-    def results(plane):
-        Cl_polar=tuple()
-        Cd_polar=tuple()
-        for result in plane.results_file:
-            with open(result,'r') as file:
-                lines=file.readlines()
+    def read_aero(case):
+        with open(case.results_file,'r') as file:
+            lines=file.readlines()
 
-                Cl_polar.append(float(lines[23].split()[2]))
-                Cd_polar.append(float(lines[24].split()[2]))
-
-        plane.Cl_polar=Cl_polar
-        plane.Cd_polar=Cd_polar
+            Cl=float(lines[23].split()[2])
+            Cd=float(lines[24].split()[2])
         
-        pass
+        return Cl,Cd
+
+    def read_eigen(plane,case):
+        with open(case.results_file,'r') as file:
+            lines=file.readlines()
+            """
+            modes={"roll":(lines[3].split()[1],lines[3].split()[2]),
+                    "dutch1":(lines[4].split()[1],lines[3].split()[2]),
+                    "dutch2":(lines[5].split()[1],lines[3].split()[2]),
+                    "short1":(lines[6].split()[1],lines[3].split()[2]),
+                    "short2":(lines[7].split()[1],lines[3].split()[2]),
+                    "spiral":(lines[8].split()[1],lines[3].split()[2]),
+                    "phugoid1":(lines[9].split()[1],lines[3].split()[2]),
+                    "phugoid2":(lines[10].split()[1],lines[3].split()[2]),}
+            """
+            freq=lines
+        
+        return freq,damp
+
