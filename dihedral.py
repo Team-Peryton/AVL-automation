@@ -1,6 +1,7 @@
+from typing import Counter
 from avl_aero_coefficients import Aero
 from geometry import Plane,Section
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor,as_completed
 from multiprocessing import freeze_support
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -9,6 +10,7 @@ import math
 import os
 import shutil
 import time
+from tqdm import tqdm
 
 def load_inputs(input_file):
     with open(input_file,'r') as f:
@@ -23,7 +25,9 @@ def load_inputs(input_file):
             "angle_max":float(lines[10].split()[1]),
             "increment":int(lines[11].split()[1]),
             "span_loc":float(lines[13].split()[1]),
-            "threads":float(lines[15].split()[1])}
+            "threads":float(lines[15].split()[1]),
+            "show_plt":lines[16].split(": ")[1][0]
+            }
 
     return inputs
 
@@ -42,53 +46,78 @@ def run(input_file):
     plane_geom,mac,span=load_plane(inputs["input_plane"])
     ref_plane_geom,ref_plane=make_ref_plane(plane_geom,mac,span,inputs["span_loc"],inputs["wing_aerofoil"])
 
-    planes=generate_planes(ref_plane_geom,inputs["angle_min"],inputs["angle_max"],inputs["increment"],inputs["span_loc"],span,ref_plane,mac,inputs["wing_aerofoil"])
-    
-    tasks=[(plane,inputs["aero_config"]) for plane in planes]
+    analysis=Aero(inputs["aero_config"])
+    planes=generate_planes(ref_plane_geom,inputs["angle_min"],inputs["angle_max"],inputs["increment"],inputs["span_loc"],span,ref_plane,mac,inputs["wing_aerofoil"],analysis)
    
-    with ProcessPoolExecutor(max_workers=8) as pool:
-        pool.map(analysis,tasks)
-    """
-    for task in tasks:
-        analysis(task)
-    
+    run_couples=[]
+    for plane in planes: #list
+        for case in plane.cases: #list
+            run_couples.append([plane,case,analysis]) # one list
+    tasks=run_couples
+    print("Polar analysis...")
     with ThreadPoolExecutor(max_workers=inputs["threads"]) as pool:
-        pool.map(analysis,tasks)
-    """
+        list(tqdm(pool.map(run_analysis,tasks),total=len(tasks)))
+
+    print("Reading polar results...")
+    polars(planes)
+    if inputs["show_plt"]=="Y":
+        plot_polars(planes,inputs["show_plt"])
+
+    tasks=[]
+    for plane in planes:
+        for case in plane.cases:
+            if case.alpha==0:
+                case.eigen=True
+                tasks.append([plane,case,analysis])
+
+    print("\nEigenmode analysis...")
+    with ThreadPoolExecutor(max_workers=inputs["threads"]) as pool:
+        list(tqdm(pool.map(run_analysis,tasks),total=len(tasks)))
+    
+    print("Reading eigenmode results...\n")
+    eigenvalues(planes,analysis)
+
+    pass
 
 def make_ref_plane(plane_geom:list,mac,span,span_loc,wing_aerofoil)->tuple:
-    ref_plane=Plane("reference",mac=mac)
-    split_Yle=(span/2)*(span_loc/100)
+    ref_plane=Plane("reference",mac=mac)    #   Creates reference plane object
+    split_Yle=(span/2)*(span_loc/100)   #   Convert from %
     ref_plane_geom=ref_plane.make_dihedral_ref(plane_geom,split_Yle,wing_aerofoil)
 
     return tuple(ref_plane_geom), ref_plane
 
-def generate_planes(ref_plane_geom:list,angle_min,angle_max,increment,span_loc,span,ref_plane,mac,aerofoil):
+def generate_planes(ref_plane_geom:list,angle_min,angle_max,increment,span_loc,span,ref_plane,mac,aerofoil,analysis):
+    """
+    Takes plane modification info & writes to string. String inserted to reference plane geometry & saved to a file.
+    """
+    
     planes=[]
     count=0
     hspan=span/2
-    split_loc=hspan*span_loc/100
+    split_loc=hspan*span_loc/100    #   Convert from %
 
+    #   Generates range of angles from min, max, and increment
     for angle in numpy.linspace(angle_min,
                                 angle_max,
                                 int(1+(angle_max-angle_min)/increment)):
 
-        name="".join([str(count),"-",str(angle),"Theta-",str(span_loc),"%"])
-        plane=Plane(name)
-        plane.d_theta=angle
+        name="".join([str(count),"-",str(angle),"deg-",str(span_loc),"%"])
+        plane=Plane(name)   #   Creates plane object with name
+        plane.dihedral_angle=angle  #   Assigns dihedral angle
+        plane.dihedral_split=span_loc   #   Assigns dihedral split percentage plcation
 
         mod_geom=list(ref_plane_geom)
 
-        Zle=round((hspan-split_loc)*math.sin(math.radians(angle)),3)
-        Yle=round((hspan-split_loc)*math.cos(math.radians(angle))+split_loc,3)
+        Zle=round((hspan-split_loc)*math.sin(math.radians(angle)),3)    #   Calculates tip Z due to dihedral angle
+        Yle=round((hspan-split_loc)*math.cos(math.radians(angle))+split_loc,3)  #   Calcualtes tip Y due to dihedral angle
 
-        tip=Section(ref_plane.Xle,Yle,Zle,mac,19,-2,aerofoil)
-        mod_str=tip.create_input()
+        tip=Section(ref_plane.Xle,Yle,Zle,mac,19,-2,aerofoil)   #   Creates tip section based off tip geometry
+        mod_str=tip.create_input()  #   Gets section string in avl format
 
         for index,line in enumerate(mod_geom):
-            if line=="YES PLEASE\n":
-                mod_geom.pop(index)
-                mod_geom.insert(index,mod_str)
+            if line=="YES PLEASE\n":    #   Finds marker
+                mod_geom.pop(index) #   Removes marker
+                mod_geom.insert(index,mod_str)  #   Inserts modified sections
             
         plane.geom_file="generated planes/"+plane.name+".avl"
         with open(plane.geom_file,'w') as file:
@@ -96,39 +125,78 @@ def generate_planes(ref_plane_geom:list,angle_min,angle_max,increment,span_loc,s
         count+=1
 
         planes.append(plane)
+        plane.results_file=list()
+        plane.cases=[case for case in analysis.initialize_cases()]  #   Assigns analysis cases
 
     print("Planes generated...")
     return(planes)
 
-def analysis(tasks):
-    plane,aero_config=tasks
-    analysis=Aero(aero_config,plane.geom_file)
-    analysis.run()
+def run_analysis(tasks):
+    time.sleep(0.001)
+    plane,case,analysis=tasks
 
-    df=pd.DataFrame(analysis.polars,columns=["Alpha (deg)","Cl","Cd"])
-    print(df)
+    analysis.analysis(plane,case)
+    
+    pass
 
-def plot(alpha:list,lift:list,drag:list):
-    plt.figure(figsize=(10, 4))
+def polars(planes):
+    for plane in planes:
+        polars=list()
+        for case in plane.cases:
+            case.Cl,case.Cd=Aero.read_aero(case)
+            polars.append((case.alpha,case.Cl,case.Cd))
+        plane.polars=pd.DataFrame(polars,columns=["Alpha (deg)","Cl","Cd"])
+        
+    pass
 
-    plt.subplot(121)
-    plt.xlabel("Alpha (deg)")
-    plt.ylabel("Cl")
-    plt.plot(alpha, lift)
-    plt.subplot(122)
-    plt.xlabel("Alpha (deg)")
-    plt.ylabel("Cd")
-    plt.plot(alpha, drag)
-    plt.suptitle('Polars')
+def eigenvalues(planes,analysis): 
+    for plane in planes:
+        for case in plane.cases:
+            if case.eigen==True:
+                analysis.read_eigen(plane,case)
 
-    lift_polar=pd.DataFrame(data={'alpha':alpha,'lift':lift})
-    drag_polar=pd.DataFrame(data={'alpha':alpha,'drag (avl)':drag})
-    #lift_polar.to_excel("lift_polar.xlsx")
-    #drag_polar.to_excel("drag_polar.xlsx")
+    dihedral_angles=[plane.dihedral_angle for plane in planes]
+    roll_damping=[plane.eigen_modes["roll"][0] for plane in planes]
+    dutch_damping=[plane.eigen_modes["dutch"][0] for plane in planes]
 
+    eigenplt,roll=plt.subplots()
+
+    red='r'
+    roll.set_xlabel(f"Dihedral Angle (deg).\nSplit Location={[plane.dihedral_split for plane in planes][0]}% of Span")
+    roll.set_ylabel("Roll Damping (unit)",color=red)
+    roll.plot(dihedral_angles,roll_damping,color=red)
+
+    dutch=roll.twinx()
+    blue='b'
+    dutch.set_ylabel("Dutch Roll Damping (unit)",color=blue)
+    dutch.plot(dihedral_angles,dutch_damping,color=blue)
+
+    eigenplt.tight_layout()
     plt.show()
 
+    pass
+
+def plot_polars(planes):
+    plt.figure(figsize=(10, 4))
+    plot1=plt.subplot(121)
+    plt.xlabel("Alpha (deg)")
+    plt.ylabel("Cl")
+    for plane in planes:
+        plane.polars.plot(ax=plot1,x="Alpha (deg)",y="Cl",label=plane.name)
+
+    plot2=plt.subplot(122)
+    plt.xlabel("Alpha (deg)")
+    plt.ylabel("Cd")
+    for plane in planes:
+        plane.polars.plot(ax=plot2,x="Alpha (deg)",y="Cd",label=plane.name)
+    
+    plt.suptitle('Polars')
+
+    plt.show()
+    pass
+
 if __name__=='__main__':
+    os.system('cls')
     freeze_support()
 
     path=os.path.abspath(os.getcwd())
@@ -141,6 +209,6 @@ if __name__=='__main__':
 
     input_file="DIHEDRAL_CONFIG.txt"
 
-    t0=time.time()
+    plt.close("all")
+
     run(input_file)
-    print(time.time()-t0)

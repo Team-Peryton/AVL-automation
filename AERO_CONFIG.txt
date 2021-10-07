@@ -1,9 +1,13 @@
 #case data
-Xcg: 0.5
+mass: 10 kg
+Xcg: 500 mm
 Ycg: 0
 Zcg: 0
-mass: 10
-velocity: 20
+Ixx: 1
+Iyy: 1
+Izz: 1
+
+velocity: 20 ms-2
 
 alpha0: 0
 alpha1: 10

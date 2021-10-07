@@ -3,27 +3,30 @@ from numpy import linspace
 import os
 import shutil
 from concurrent.futures import ThreadPoolExecutor,ProcessPoolExecutor
+import time
 
 class Case():
-    def __init__(self,Xcg,Ycg,Zcg,mass,velocity,alpha,case_file=None,results_file=None,Cl=None,Cd=None):
+    def __init__(self,Xcg,Ycg,Zcg,Ixx,Iyy,Izz,mass,velocity,alpha,case_file=None,results_file=None,Cl=None,Cd=None,eigen=False):
         self.Xcg=Xcg
         self.Ycg=Ycg
         self.Zcg=Zcg
+        self.Ixx=Ixx
+        self.Iyy=Iyy
+        self.Izz=Izz
         self.mass=mass
         self.velocity=velocity
         self.alpha=alpha
         self.case_file=case_file
-        self.results_file=results_file
         self.Cl=Cl
         self.Cd=Cd
+        self.results_file=results_file
+        self.eigen=eigen
 
 ########################    INPUT & RUN    ##############################
 class Aero():
-    def __init__(self,input_file,plane_file,cases=None,inputs=None,polars=None):
+    def __init__(self,input_file,polars=None):
         self.input_file=input_file
-        self.plane_file=plane_file
-        self.cases=cases
-        self.inputs=inputs
+        self.inputs=self.load_inputs()
         self.polars=polars
 
         path=os.path.abspath(os.getcwd())
@@ -35,48 +38,48 @@ class Aero():
         os.mkdir(path+"/results")
 
     ### Main run function.
-    def run(self):
-        
-        inputs=self.load_inputs()
-
+    def initialize_cases(self):
+        """
+        Creates case strings for each alpha and writes to file. 
+        """       
         #   Creates alpha range
         alpha_range=linspace(
-                            inputs["alpha0"],
-                            inputs["alpha1"],
-                            int(1+(inputs["alpha1"]-inputs["alpha0"])/inputs["increment"])
+                            self.inputs["alpha0"],
+                            self.inputs["alpha1"],
+                            int(1+(self.inputs["alpha1"]-self.inputs["alpha0"])/self.inputs["increment"])
                             )
         #   Initiates class objects
-        self.cases=[Case(inputs["Xcg"],inputs["Ycg"],inputs["Zcg"],inputs["mass"],inputs["velocity"],alpha) for alpha in alpha_range]
+        cases=[Case(self.inputs["Xcg"],self.inputs["Ycg"],self.inputs["Zcg"],self.inputs["Ixx"],self.inputs["Iyy"],self.inputs["Izz"],self.inputs["mass"],self.inputs["velocity"],alpha) for alpha in alpha_range]
         
-        #   Creates cases
-        tasks=[case for case in self.cases]
-        with ThreadPoolExecutor(max_workers=inputs["threads"]) as pool:
+        #   Writes case files & adds filepath to case obj
+        tasks=[case for case in cases]
+        with ThreadPoolExecutor(max_workers=self.inputs["threads"]) as pool:
             pool.map(self.case_create,tasks)
-        #with ProcessPoolExecutor(max_workers=8) as pool:
-        #    pool.map(self.case_create,tasks)
 
-        #   Runs analysis
-        tasks=[(case,self.plane_file) for case in self.cases]
-        with ThreadPoolExecutor(max_workers=inputs["threads"]) as pool:
-            pool.map(self.run_analysis,tasks)
-        #with ProcessPoolExecutor(max_workers=8) as pool:
-        #    pool.map(self.run_analysis,tasks)
-        self.results()
+        return cases
 
     ### Loads inputs... 
     def load_inputs(self):
         with open(self.input_file,'r') as file:
             lines=file.readlines()
         
-        inputs={"Xcg":float(lines[1].split()[1]),
-                "Ycg":float(lines[2].split()[1]),
-                "Zcg":float(lines[3].split()[1]),
-                "mass":float(lines[4].split()[1]),
-                "velocity":float(lines[5].split()[1]),
-                "alpha0":float(lines[7].split()[1]),
-                "alpha1":float(lines[8].split()[1]),
-                "increment":float(lines[9].split()[1]),
-                "threads":int(lines[11].split()[1])}
+        try:
+            inputs={"mass":float(lines[1].split()[1]),
+                    "Xcg":float(lines[2].split()[1]),
+                    "Ycg":float(lines[3].split()[1]),
+                    "Zcg":float(lines[4].split()[1]),
+                    "Ixx":float(lines[5].split()[1]),
+                    "Iyy":float(lines[6].split()[1]),
+                    "Izz":float(lines[7].split()[1]),
+                    "velocity":float(lines[9].split()[1]),
+                    "alpha0":float(lines[11].split()[1]),
+                    "alpha1":float(lines[12].split()[1]),
+                    "increment":float(lines[13].split()[1]),
+                    "threads":int(lines[15].split()[1])
+                    }
+        except IndexError:
+            print("Parameters must have a value assigned. (AERO_CONFIG.txt)")
+            exit()
 
         return(inputs)
     ########################    ANALYSIS    ##############################
@@ -103,38 +106,63 @@ class Aero():
         case_str+="Y_cg={0} Lunit\n".format(case.Ycg)
         case_str+="Z_cg={0} Lunit\n".format(case.Zcg)
         case_str+="mass={0} kg\n".format(case.mass)
+        case_str+="Ixx={0} kg\n".format(case.Ixx)
+        case_str+="Iyy={0} kg\n".format(case.Iyy)
+        case_str+="Izz={0} kg\n".format(case.Izz)
         case_str+="velocity={0} Lunit/Tunit\n".format(case.velocity)
         
-        path="cases/case "+str(case.alpha)+"deg.txt"
+        path="cases/"+str(case.alpha)+"deg.txt"
 
         with open(path,'w') as file:    #   Saves case file
             file.write(case_str)
         case.case_file=path
         
     ### Runs analysis through AVL interface options & saves stability derivatives.
-    def run_analysis(self,tasks)->str:
-        case,plane=tasks
-
-        run="load {0}\n".format(plane)    #   Load plane
+    def analysis(self,plane,case)->str:
+        """
+        Runs aero analysis.
+        """     
+        run="load {0}\n".format(plane.geom_file)    #   Load plane
         run+="case {0}\n".format(case.case_file)  #   Load case
         run+="oper\n o\n v\n\n x\n"   #   Run analysis
-        run+="ft\n" #   View stability derivatives
-        
-        case.results_file="results/"+str(case.alpha)+"deg.txt"
 
+        if case.eigen==True:
+            run+="\nmode\n N\n W\n"   #   Run eigenvalue analysis
+        else:
+            run+="ft\n" #   View stability derivatives
+        case.results_file="".join(["results/",plane.name[0],"-",str(case.alpha),"deg.aero" if case.eigen==False else "deg.eig"])       
         run+=case.results_file+"\n"    #   Saves results
         
         self.issueCmd(run)
 
+        pass
+
     ########################    RESULTS    ##############################
 
-    def results(self):
-        for case in self.cases:
-            with open(case.results_file,'r') as file:
-                lines=file.readlines()
+    def read_aero(case):
+        with open(case.results_file,'r') as file:
+            lines=file.readlines()
 
-                case.Cl=float(lines[23].split()[2])
-                case.Cd=float(lines[24].split()[2])
+            Cl=float(lines[23].split()[2])
+            Cd=float(lines[24].split()[2])
+        
+        return Cl,Cd
 
-        polars=[(case.alpha,case.Cl,case.Cd) for case in self.cases]
-        self.polars=tuple(polars)
+    def read_eigen(plane,case):
+        with open(case.results_file,'r') as file:
+            lines=file.readlines()
+
+            try:
+                modes={"roll":map(float(),lines[3].split()[1:]),
+                        "dutch":map(float(),lines[4].split()[1:]),
+                        "short":map(float(),lines[5].split()[1:]),
+                        "spiral":map(float(),lines[6].split()[1:]),
+                        "phugoid1":map(float(),lines[7].split()[1:]),
+                        "phugoid2":map(float(),lines[8].split()[1:])
+                        }
+            except IndexError:
+                print("Eigenmode analysis failed.")
+                exit()
+        plane.eigen_modes=modes
+
+        pass

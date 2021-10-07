@@ -10,8 +10,12 @@ class Plane:
                 St:float=None,
                 mac:float=None,
                 ARt:float=None,
-                d_theta:float=None,
-                Xle:float=None
+                dihedral_angle:float=None,
+                dihedral_split:float=None,
+                Xle:float=None,
+                cases:list=None,
+                polars=None,
+                eigen_modes=None
                 ):
 
         self.name=name
@@ -24,8 +28,12 @@ class Plane:
         self.St=St
         self.mac=mac
         self.ARt=ARt
-        self.d_theta=d_theta
+        self.dihedral_angle=dihedral_angle
+        self.dihedral_split=dihedral_split
         self.Xle=Xle
+        self.cases=cases
+        self.polars=polars
+        self.eigen_modes=eigen_modes
     
     def make_reference(self,plane_geom:list)->list:
         if self.name=="reference":
@@ -74,8 +82,9 @@ class Plane:
                 if count<2 or section==False:   #   Adds everything that isn't section 
                     ref_plane_geom.append(line)     
                 if line.split()[0]=="SURFACE" and surface==True:    #   Finds next surface
-                    split=Section(self.Xle,split_Yle,0,self.mac,19,-1,aerofoil)  #   Generates split section
-                    ref_plane_geom.append("\n"+split.create_input()+"\n")   #   Adds split section
+                    if split_Yle!=0:
+                        split=Section(self.Xle,split_Yle,0,self.mac,19,-1,aerofoil)  #   Generates split section
+                        ref_plane_geom.append("\n"+split.create_input()+"\n")   #   Adds split section
                     ref_plane_geom.append("YES PLEASE\n")    #   Adds marker for adding new sections
                     section=False
                     surface=False
