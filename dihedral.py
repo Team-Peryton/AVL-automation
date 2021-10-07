@@ -25,7 +25,8 @@ def load_inputs(input_file):
             "angle_max":float(lines[10].split()[1]),
             "increment":int(lines[11].split()[1]),
             "span_loc":float(lines[13].split()[1]),
-            "threads":float(lines[15].split()[1])
+            "threads":float(lines[15].split()[1]),
+            "show_plt":lines[16].split(": ")[1][0]
             }
 
     return inputs
@@ -59,19 +60,23 @@ def run(input_file):
 
     print("Reading polar results...")
     polars(planes)
+    if inputs["show_plt"]=="Y":
+        plot_polars(planes,inputs["show_plt"])
 
-    plot_polars(planes)
+    tasks=[]
+    for plane in planes:
+        for case in plane.cases:
+            if case.alpha==0:
+                case.eigen=True
+                tasks.append([plane,case,analysis])
 
-    """
-    case.eigen=True
-    tasks=(plane,analysis)
     print("Eigenmode analysis...")
     with ThreadPoolExecutor(max_workers=inputs["threads"]) as pool:
         list(tqdm(pool.map(run_analysis,tasks),total=len(tasks)))
     
-    print("Reading eigenmode results...")
-    eigenvalues(planes)
-    """
+    print("Reading eigenmode results...\n")
+    eigenvalues(planes,analysis)
+
     pass
 
 def make_ref_plane(plane_geom:list,mac,span,span_loc,wing_aerofoil)->tuple:
@@ -139,7 +144,13 @@ def polars(planes):
         
     pass
 
-def eigenvalues(planes):
+def eigenvalues(planes,analysis):
+    for plane in planes:
+        for case in plane.cases:
+            if case.eigen==True:
+                print(plane,case)
+                analysis.read_eigen(plane,case)
+        print(plane.eigen_modes)
     pass
 
 def plot_polars(planes):
@@ -159,6 +170,7 @@ def plot_polars(planes):
     plt.suptitle('Polars')
 
     plt.show()
+    pass
 
 if __name__=='__main__':
     os.system('cls')
