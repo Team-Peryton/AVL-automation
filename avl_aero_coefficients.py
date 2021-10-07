@@ -127,10 +127,10 @@ class Aero():
         run+="oper\n o\n v\n\n x\n"   #   Run analysis
 
         if case.eigen==True:
-            run+="mode\n N\n W\n"   #   Run eigenvalue analysis
+            run+="\nmode\n N\n W\n"   #   Run eigenvalue analysis
         else:
             run+="ft\n" #   View stability derivatives
-        case.results_file="".join(["results/",plane.name[0],"-",str(case.alpha),"deg.txt" if case.eigen==False else "deg"])       
+        case.results_file="".join(["results/",plane.name[0],"-",str(case.alpha),"deg.aero" if case.eigen==False else "deg.eig"])       
         run+=case.results_file+"\n"    #   Saves results
         
         self.issueCmd(run)
@@ -151,17 +151,18 @@ class Aero():
     def read_eigen(plane,case):
         with open(case.results_file,'r') as file:
             lines=file.readlines()
-            """
-            modes={"roll":(lines[3].split()[1],lines[3].split()[2]),
-                    "dutch1":(lines[4].split()[1],lines[3].split()[2]),
-                    "dutch2":(lines[5].split()[1],lines[3].split()[2]),
-                    "short1":(lines[6].split()[1],lines[3].split()[2]),
-                    "short2":(lines[7].split()[1],lines[3].split()[2]),
-                    "spiral":(lines[8].split()[1],lines[3].split()[2]),
-                    "phugoid1":(lines[9].split()[1],lines[3].split()[2]),
-                    "phugoid2":(lines[10].split()[1],lines[3].split()[2]),}
-            """
-            freq=lines
-        
-        #return freq,damp
 
+            try:
+                modes={"roll":map(float(),lines[3].split()[1:]),
+                        "dutch":map(float(),lines[4].split()[1:]),
+                        "short":map(float(),lines[5].split()[1:]),
+                        "spiral":map(float(),lines[6].split()[1:]),
+                        "phugoid1":map(float(),lines[7].split()[1:]),
+                        "phugoid2":map(float(),lines[8].split()[1:])
+                        }
+            except IndexError:
+                print("Eigenmode analysis failed.")
+                exit()
+        plane.eigen_modes=modes
+
+        pass
