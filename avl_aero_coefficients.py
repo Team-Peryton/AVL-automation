@@ -3,10 +3,10 @@ from numpy import linspace
 import os
 import shutil
 from concurrent.futures import ThreadPoolExecutor,ProcessPoolExecutor
-import time
+import pandas as pd
 
 class Case():
-    def __init__(self,Xcg,Ycg,Zcg,Ixx,Iyy,Izz,mass,velocity,alpha,case_file=None,results_file=None,Cl=None,Cd=None,eigen=False):
+    def __init__(self,Xcg,Ycg,Zcg,Ixx,Iyy,Izz,mass,velocity,alpha,case_file=None,results_file=None,Cl=None,Cd=None,eigen=False,id=False):
         self.Xcg=Xcg
         self.Ycg=Ycg
         self.Zcg=Zcg
@@ -21,6 +21,7 @@ class Case():
         self.Cd=Cd
         self.results_file=results_file
         self.eigen=eigen
+        self.id=id
 
 ########################    INPUT & RUN    ##############################
 class Aero():
@@ -75,7 +76,8 @@ class Aero():
                     "alpha0":float(lines[11].split()[1]),
                     "alpha1":float(lines[12].split()[1]),
                     "increment":float(lines[13].split()[1]),
-                    "threads":int(lines[15].split()[1])
+                    "threads":int(lines[15].split()[1]),
+                    "units":lines[16].split()[1]
                     }
         except IndexError:
             print("Parameters must have a value assigned. (AERO_CONFIG.txt)")
@@ -106,10 +108,12 @@ class Aero():
         case_str+="Y_cg={0} Lunit\n".format(case.Ycg)
         case_str+="Z_cg={0} Lunit\n".format(case.Zcg)
         case_str+="mass={0} kg\n".format(case.mass)
-        case_str+="Ixx={0} kg\n".format(case.Ixx)
-        case_str+="Iyy={0} kg\n".format(case.Iyy)
-        case_str+="Izz={0} kg\n".format(case.Izz)
-        case_str+="velocity={0} Lunit/Tunit\n".format(case.velocity)
+        case_str+="Ixx={0} kg-m^2\n".format(case.Ixx)
+        case_str+="Iyy={0} kg-m^2\n".format(case.Iyy)
+        case_str+="Izz={0} kg-m^2\n".format(case.Izz)
+        case_str+="velocity={0} m/s\n".format(case.velocity)
+        case_str+="density=1.225 kg-m^3\n"
+        case_str+="grav.acc.=0.98 m/s^2\n"
         
         path="cases/"+str(case.alpha)+"deg.txt"
 
@@ -124,13 +128,14 @@ class Aero():
         """     
         run="load {0}\n".format(plane.geom_file)    #   Load plane
         run+="case {0}\n".format(case.case_file)  #   Load case
+        run+="mass {0}\n".format(self.inputs["units"])
         run+="oper\n o\n v\n\n x\n"   #   Run analysis
 
         if case.eigen==True:
             run+="\nmode\n N\n W\n"   #   Run eigenvalue analysis
         else:
             run+="ft\n" #   View stability derivatives
-        case.results_file="".join(["results/",plane.name[0],"-",str(case.alpha),"deg.aero" if case.eigen==False else "deg.eig"])       
+        case.results_file="".join(["results/",plane.name.split("-")[0],"-",str(case.alpha),"deg.aero" if case.eigen==False else "deg.eig"])       
         run+=case.results_file+"\n"    #   Saves results
         
         self.issueCmd(run)
@@ -139,6 +144,7 @@ class Aero():
 
     ########################    RESULTS    ##############################
 
+    #@staticmethod
     def read_aero(case):
         with open(case.results_file,'r') as file:
             lines=file.readlines()
@@ -148,21 +154,27 @@ class Aero():
         
         return Cl,Cd
 
+    @staticmethod
     def read_eigen(plane,case):
         with open(case.results_file,'r') as file:
             lines=file.readlines()
 
             try:
-                modes={"roll":map(float(),lines[3].split()[1:]),
-                        "dutch":map(float(),lines[4].split()[1:]),
-                        "short":map(float(),lines[5].split()[1:]),
-                        "spiral":map(float(),lines[6].split()[1:]),
-                        "phugoid1":map(float(),lines[7].split()[1:]),
-                        "phugoid2":map(float(),lines[8].split()[1:])
+                modes={"dutch":tuple(map(float,lines[3].split()[1:])),
+                        #"-dutch":tuple(map(float,lines[4].split()[1:])),
+                        "roll":tuple(map(float,lines[5].split()[1:])),
+                        #"short":tuple(map(float,lines[6].split()[1:])),
+                        #"-short":tuple(map(float,lines[7].split()[1:])),
+                        #"lateral":tuple(map(float,lines[8].split()[1:])),
+                        #"phugoid":tuple(map(float,lines[9].split()[1:])),
+                        #"-phugoid":tuple(map(float,lines[10].split()[1:])),
                         }
-            except IndexError:
-                print("Eigenmode analysis failed.")
+            except IndexError as e:
+                print(f"Eigenmode analysis/read failed: Case {case.results_file}")
+                print(f"\n{e}")
                 exit()
+        modes_df=pd.DataFrame.from_dict(modes,orient='index',columns=["Damping Ratio","Frequency"])
+        #print(modes_df)
         plane.eigen_modes=modes
 
         pass
