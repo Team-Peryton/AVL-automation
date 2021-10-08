@@ -1,7 +1,16 @@
 # AVL-Wrapper
 Wraps avl.
 
-### avl_aero_coefficients.py useage:
+#### Tail Sizing
+- Suggests tail configurations based on input geometry to achieve a desired static margin.
+
+#### Dihedral
+- Generates wing configurations with varying dihedral angle and set spanwise dihedral location. 
+- Calculates roll and dutch roll damping modes for each configuration.
+- Runs aero analysis, generating Cl and Cd polars.
+
+
+#### avl_aero_coefficients.py useage:
 
 ```
 analysis=Aero("AERO_CONFIG.txt")
