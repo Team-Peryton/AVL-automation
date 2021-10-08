@@ -49,11 +49,12 @@ def run(input_file):
     analysis=Aero(inputs["aero_config"])
     planes=generate_planes(ref_plane_geom,inputs["angle_min"],inputs["angle_max"],inputs["increment"],inputs["span_loc"],span,ref_plane,mac,inputs["wing_aerofoil"],analysis)
    
-    run_couples=[]
+    tasks=[]
+
     for plane in planes: #list
         for case in plane.cases: #list
-            run_couples.append([plane,case,analysis]) # one list
-    tasks=run_couples
+            tasks.append([plane,case,analysis]) # one list
+
     print("Polar analysis...")
     with ThreadPoolExecutor(max_workers=inputs["threads"]) as pool:
         list(tqdm(pool.map(run_analysis,tasks),total=len(tasks)))
@@ -61,7 +62,7 @@ def run(input_file):
     print("Reading polar results...")
     polars(planes)
     if inputs["show_plt"]=="Y":
-        plot_polars(planes,inputs["show_plt"])
+        plot_polars(planes)
 
     tasks=[]
     for plane in planes:
@@ -77,39 +78,47 @@ def run(input_file):
     print("Reading eigenmode results...\n")
     eigenvalues(planes,analysis)
 
+    geom_plot(planes)
+
+    plt.show()
+
     pass
 
 def make_ref_plane(plane_geom:list,mac,span,span_loc,wing_aerofoil)->tuple:
     ref_plane=Plane("reference",mac=mac)    #   Creates reference plane object
-    split_Yle=(span/2)*(span_loc/100)   #   Convert from %
-    ref_plane_geom=ref_plane.make_dihedral_ref(plane_geom,split_Yle,wing_aerofoil)
+    ref_plane.dihedral_splitY=(span/2)*(span_loc/100)   #   Convert from %
+    ref_plane_geom=ref_plane.make_dihedral_ref(plane_geom,ref_plane.dihedral_splitY,wing_aerofoil)
 
     return tuple(ref_plane_geom), ref_plane
 
 def generate_planes(ref_plane_geom:list,angle_min,angle_max,increment,span_loc,span,ref_plane,mac,aerofoil,analysis):
     """
     Takes plane modification info & writes to string. String inserted to reference plane geometry & saved to a file.
-    """
-    
+    """    
     planes=[]
     count=0
     hspan=span/2
-    split_loc=hspan*span_loc/100    #   Convert from %
-
+  
     #   Generates range of angles from min, max, and increment
     for angle in numpy.linspace(angle_min,
                                 angle_max,
                                 int(1+(angle_max-angle_min)/increment)):
 
         name="".join([str(count),"-",str(angle),"deg-",str(span_loc),"%"])
+        
         plane=Plane(name)   #   Creates plane object with name
         plane.dihedral_angle=angle  #   Assigns dihedral angle
         plane.dihedral_split=span_loc   #   Assigns dihedral split percentage plcation
+        split_loc=hspan*span_loc/100    #   Convert from %
+        plane.dihedral_splitY=split_loc
+        plane.span=span
 
         mod_geom=list(ref_plane_geom)
 
         Zle=round((hspan-split_loc)*math.sin(math.radians(angle)),3)    #   Calculates tip Z due to dihedral angle
+        plane.tipZ=Zle
         Yle=round((hspan-split_loc)*math.cos(math.radians(angle))+split_loc,3)  #   Calcualtes tip Y due to dihedral angle
+        plane.tipY=Yle
 
         tip=Section(ref_plane.Xle,Yle,Zle,mac,19,-2,aerofoil)   #   Creates tip section based off tip geometry
         mod_str=tip.create_input()  #   Gets section string in avl format
@@ -118,7 +127,7 @@ def generate_planes(ref_plane_geom:list,angle_min,angle_max,increment,span_loc,s
             if line=="YES PLEASE\n":    #   Finds marker
                 mod_geom.pop(index) #   Removes marker
                 mod_geom.insert(index,mod_str)  #   Inserts modified sections
-            
+                
         plane.geom_file="generated planes/"+plane.name+".avl"
         with open(plane.geom_file,'w') as file:
             file.write("".join(mod_geom))
@@ -134,9 +143,9 @@ def generate_planes(ref_plane_geom:list,angle_min,angle_max,increment,span_loc,s
 def run_analysis(tasks):
     time.sleep(0.001)
     plane,case,analysis=tasks
-
-    analysis.analysis(plane,case)
     
+    analysis.analysis(plane,case)
+
     pass
 
 def polars(planes):
@@ -146,33 +155,6 @@ def polars(planes):
             case.Cl,case.Cd=Aero.read_aero(case)
             polars.append((case.alpha,case.Cl,case.Cd))
         plane.polars=pd.DataFrame(polars,columns=["Alpha (deg)","Cl","Cd"])
-        
-    pass
-
-def eigenvalues(planes,analysis): 
-    for plane in planes:
-        for case in plane.cases:
-            if case.eigen==True:
-                analysis.read_eigen(plane,case)
-
-    dihedral_angles=[plane.dihedral_angle for plane in planes]
-    roll_damping=[plane.eigen_modes["roll"][0] for plane in planes]
-    dutch_damping=[plane.eigen_modes["dutch"][0] for plane in planes]
-
-    eigenplt,roll=plt.subplots()
-
-    red='r'
-    roll.set_xlabel(f"Dihedral Angle (deg).\nSplit Location={[plane.dihedral_split for plane in planes][0]}% of Span")
-    roll.set_ylabel("Roll Damping (unit)",color=red)
-    roll.plot(dihedral_angles,roll_damping,color=red)
-
-    dutch=roll.twinx()
-    blue='b'
-    dutch.set_ylabel("Dutch Roll Damping (unit)",color=blue)
-    dutch.plot(dihedral_angles,dutch_damping,color=blue)
-
-    eigenplt.tight_layout()
-    plt.show()
 
     pass
 
@@ -190,10 +172,53 @@ def plot_polars(planes):
     for plane in planes:
         plane.polars.plot(ax=plot2,x="Alpha (deg)",y="Cd",label=plane.name)
     
+    plt.tight_layout
     plt.suptitle('Polars')
 
-    plt.show()
-    pass
+    return plt
+
+def eigenvalues(planes,analysis): 
+    for plane in planes:
+        for case in plane.cases:
+            if case.eigen==True:
+                analysis.read_eigen(plane,case)
+
+    dihedral_angles=[plane.dihedral_angle for plane in planes]
+    roll_damping=[plane.eigen_modes["roll"][0] for plane in planes]
+    dutch_damping=[plane.eigen_modes["dutch"][0] for plane in planes]
+
+    #df=pd.DataFrame(list(zip(dihedral_angles,roll_damping,dutch_damping)), columns=["Angle","Roll","Dutch"])
+    #print(df)
+
+    eigenplt,roll=plt.subplots()
+    plt.title("Eigenmode Damping for Dihedral Angles")
+
+    red='r'
+    roll.set_xlabel(f"Dihedral Angle (deg)\nSplit Location={[plane.dihedral_split for plane in planes][0]}% of Span")
+    roll.set_ylabel("Roll Damping (/s)",color=red)
+    roll.plot(dihedral_angles,roll_damping,color=red)
+
+    dutch=roll.twinx()
+    blue='b'
+    dutch.set_ylabel("Dutch Roll Damping (/s)",color=blue)
+    dutch.plot(dihedral_angles,dutch_damping,color=blue)
+
+    eigenplt.tight_layout()
+    #plt.show()
+
+    return plt
+
+def geom_plot(planes):
+    plt.figure()
+    plt.title("Spanwise Geometry Plot")
+    plt.xlabel("Y (mm)")
+    plt.ylabel("Z (mm)")  
+    plt.xlim(0,max([plane.tipY for plane in planes]))
+    plt.ylim(0,max([plane.tipY for plane in planes]))
+    for plane in planes:
+        plt.plot([0,plane.dihedral_splitY,plane.tipY],[0,0,plane.tipZ])
+    
+    return plt
 
 if __name__=='__main__':
     os.system('cls')
