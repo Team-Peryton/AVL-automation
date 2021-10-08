@@ -7,11 +7,11 @@ elevator_aerofoil: NACA 0012H.dat
 fin_aerofoil: NACA 0012H.dat
 
 #dihedral parameters
-angle_min: 10 deg
-angle_max: 15 deg
-increment: 5 deg
+angle_min: 0 deg
+angle_max: 10 deg
+increment: 1 deg
 
-span_loc: 0 %
+span_loc: 30 %
 
-threads: 4
-show plot?: N (Y/N)
+threads: 8
+show plot?: Y (Y/N)
