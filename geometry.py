@@ -19,7 +19,8 @@ class Plane:
                 Xle:float=None,
                 cases:list=None,
                 polars=None,
-                eigen_modes=None
+                eigen_modes=None,
+                tail_config=None
                 ):
 
         self.name=name
@@ -42,18 +43,19 @@ class Plane:
         self.cases=cases
         self.polars=polars
         self.eigen_modes=eigen_modes
+        self.tail_config=tail_config
     
     def make_reference(self,plane_geom:list)->list:
         if self.name=="reference":
             ref_plane=list()
             surface=False
             section=False
-
-            for line in plane_geom:
+        
+            for line in plane_geom:              
                 if line.split()[0]=="Elevator": #   Finds elevator surface
                     surface=True
                 if line.split()[0]=="SECTION" and surface==True:    #   Finds section
-                    section=True        
+                    section=True  
                 if section!=True:   #   Adds everything that isn't section 
                     ref_plane.append(line)     
                 if line.split()[0]=="SURFACE" and surface==True:    #   Finds next surface
@@ -61,6 +63,17 @@ class Plane:
                     section=False
                     surface=False
                     ref_plane.append(line)  #   Adds the rest of the file
+            finless=list()
+            if self.tail_config=="inverted_V":
+                print("hi")
+                for line in ref_plane:
+                    if line.split()[0]=="Fin":
+                        finless=finless[:-1]
+                        break
+                    else:
+                        finless.append(line)
+                ref_plane=finless
+        
         else:
             print("Plane must be reference.")
             
