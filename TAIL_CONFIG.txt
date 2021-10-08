@@ -1,0 +1,24 @@
+#files
+input_plane: aria3.avl
+
+wing_aerofoil: NACA2412.dat
+elevator_aerofoil: NACA0012H.dat
+fin_aerofoil: NACA0012H.dat
+
+#aircraft data Lunit=[mm]
+Xcg: 400
+Ycg: 0
+Zcg: 0
+mass: 10
+
+#solver inputs Lunit=[mm], Sunit=[m2]
+Lt_upper: 1556
+Lt_lower: 1556
+St_upper: 0.117
+St_lower: 0.117
+points: 10
+
+SM_ideal: 0.3
+tolerance: 0.05
+
+threads: 8
