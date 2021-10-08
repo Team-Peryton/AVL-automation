@@ -23,3 +23,9 @@ for plane in planes:
     analysis.analysis(plane,plane.case)
 analysis.read_aero(case)
 ```
+
+#### Required files in same directory:
+- avl.exe
+- Config files
+- Input plane .avl file
+- aerofoil .dat files
