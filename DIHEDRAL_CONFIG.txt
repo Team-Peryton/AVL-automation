@@ -14,4 +14,4 @@ increment: 1 deg
 span_loc: 30 %
 
 threads: 8
-show plot?: Y (Y/N)
+show polar plot?: Y (Y/N)
