@@ -15,7 +15,7 @@ def run(input_file):
     
     #   Generate planes
     mac,plane_geom, ARt=load_plane(inputs["input_plane"])    #   Loads input plane
-    ref_plane=make_ref_plane(plane_geom)    #   Strips input plane of elevator sections
+    ref_plane=make_ref_plane(plane_geom,inputs["config"])    #   Strips input plane of elevator sections
     planes=generate_planes(ref_plane,inputs["St_lower"],inputs["St_upper"],inputs["Lt_lower"],inputs["Lt_upper"],inputs["steps"],ARt,mac,inputs["elevator_aerofoil"],inputs["Xcg"]) #   Generates configured planes
     
     #   Run analysis
@@ -30,9 +30,9 @@ def load_inputs(input_file):
         lines=[line for line in file.readlines()]
     
     inputs={"input_plane":lines[1].split()[1],
-            "wing_aerofoil":lines[3].split()[1],
-            "elevator_aerofoil":lines[4].split()[1],
-            "fin_aerofoil":lines[5].split()[1],
+            "wing_aerofoil":lines[3].split(": ")[1:][0],
+            "elevator_aerofoil":lines[4].split(": ")[1:][0],
+            "fin_aerofoil":lines[5].split(": ")[1:][0],
             "Xcg":float(lines[8].split()[1]),
             "Ycg":float(lines[9].split()[1]),
             "Zcg":float(lines[10].split()[1]),
@@ -44,7 +44,8 @@ def load_inputs(input_file):
             "steps":int(lines[18].split()[1]),
             "SM_ideal":float(lines[20].split()[1]),
             "tolerance":float(lines[21].split()[1]),
-            "threads":int(lines[23].split()[1])}
+            "config":lines[23].split()[1],
+            "threads":int(lines[25].split()[1])}
 
     if inputs["Lt_lower"]==0 or inputs["St_lower"]==0:
         print("Input non-zero lower bound.")
@@ -160,8 +161,9 @@ def load_plane(plane_file:str):
     return mac, plane_geom, ARt
 
 ### Creates reference plane str exlucing elevator
-def make_ref_plane(plane_geom:list)->tuple:
+def make_ref_plane(plane_geom:list,tail_config:str)->tuple:
     ref_plane=Plane("reference")
+    ref_plane.tail_config=tail_config
     ref_plane_geom=ref_plane.make_reference(plane_geom)
 
     return tuple(ref_plane_geom)
