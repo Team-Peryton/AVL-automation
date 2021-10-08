@@ -28,7 +28,6 @@ class Aero():
     def __init__(self,input_file,polars=None):
         self.input_file=input_file
         self.inputs=self.load_inputs()
-        self.polars=polars
 
         path=os.path.abspath(os.getcwd())
         if os.path.isdir(path+"/cases")==True:
