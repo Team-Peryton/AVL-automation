@@ -229,8 +229,11 @@ if __name__=='__main__':
         shutil.rmtree(path+"/results")
     if os.path.isdir(path+"/generated planes")==True:
         shutil.rmtree(path+"/generated planes")
+    if os.path.isdir(path+"/cases")==True:
+        shutil.rmtree(path+"/cases")
     os.mkdir(path+"/generated planes")
     os.mkdir(path+"/results")
+    os.mkdir(path+"/cases")
 
     input_file="DIHEDRAL_CONFIG.txt"
 
