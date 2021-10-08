@@ -1,11 +1,9 @@
 # AVL-Wrapper
+Wraps avl.
 
-Wraps avl
+## avl_aero_coefficients.py useage:
 
-plane object has a list of case objects 
-    case obecects contain alpha, Cl, Cd, parent case, result
-
-plot all polars on 1 graph
-
-ISSUES:
-    thread map loops same few cases
+> analysis=Aero("AERO_CONFIG.txt")
+> cases=analysis.initialize_cases()
+> analysis.analysis(plane,case)
+> analysis.read_aero(case)
