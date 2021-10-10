@@ -8,6 +8,7 @@ class Plane:
                 sm:float=None,
                 Lt:float=None,
                 St:float=None,
+                St_v:float=None,
                 mac:float=None,
                 ARt:float=None,
                 span:float=None,
@@ -30,7 +31,8 @@ class Plane:
         self.np=np
         self.sm=sm
         self.Lt=Lt
-        self.St=St
+        self.St=St  #   Equivilent horizontal tail area
+        self.St_v=St_v  #   Equivilent vertical tail area
         self.mac=mac
         self.ARt=ARt
         self.span=span
@@ -64,8 +66,7 @@ class Plane:
                     surface=False
                     ref_plane.append(line)  #   Adds the rest of the file
             finless=list()
-            if self.tail_config=="inverted_V":
-                print("hi")
+            if self.tail_config=="inverted_V":  #   Removes fin surface 
                 for line in ref_plane:
                     if line.split()[0]=="Fin":
                         finless=finless[:-1]
