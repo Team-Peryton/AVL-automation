@@ -1,3 +1,20 @@
+"""
+option A:
+- remake entire plane file from scratch - negates finding sections and deleting (massive pain)
+	- Requires:
+	- Identify which variables can be driven (Nspace etc)
+	- Reading wing surface (
+	- generate plane module - INPUTS: initial wing data?, 
+
+option B:
+- remove fin & regenerate - entire fin surface or just sections?
+- 
+
+inverted V:
+IN: Sh,Sv,AR (equivilent) 
+OUT: c=f(Sh,AR), z=f(Sv,c), y=f(Sh,c)
+"""
+
 import subprocess as sp
 from geometry import Plane,Section
 import math
@@ -6,6 +23,7 @@ import os
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 ########################    INPUT & RUN    ##############################
 
@@ -41,11 +59,12 @@ def load_inputs(input_file):
             "Lt_lower":float(lines[15].split()[1]),
             "St_upper":float(lines[16].split()[1]),
             "St_lower":float(lines[17].split()[1]),
-            "steps":int(lines[18].split()[1]),
-            "SM_ideal":float(lines[20].split()[1]),
-            "tolerance":float(lines[21].split()[1]),
-            "config":lines[23].split()[1],
-            "threads":int(lines[25].split()[1])}
+            "St_v":float(lines[18].split()[1]),
+            "steps":int(lines[19].split()[1]),
+            "SM_ideal":float(lines[21].split()[1]),
+            "tolerance":float(lines[22].split()[1]),
+            "config":lines[24].split()[1],
+            "threads":int(lines[26].split()[1])}
 
     if inputs["Lt_lower"]==0 or inputs["St_lower"]==0:
         print("Input non-zero lower bound.")
@@ -60,14 +79,13 @@ def analysis_manager(inputs,planes):
     #   Perform analysis
     case=case_create(inputs["Xcg"],inputs["Ycg"],inputs["Zcg"],inputs["mass"])  #   Generates case file
 
+    print("\nStability analysis...")
     tasks=[(case,plane) for plane in planes]    #   Generator for running all plane configs
     with ThreadPoolExecutor(max_workers=inputs["threads"]) as pool: #   Starts analysis on multiple threads
-        pool.map(run_analysis,tasks)
+        list(tqdm(pool.map(run_analysis,tasks),total=len(tasks)))
     tasks=[plane for plane in planes]
     with ThreadPoolExecutor(max_workers=inputs["threads"]) as pool: #   Starts post processing on multiple threads
         pool.map(calc_SM,tasks)
-    
-    print("Analysis complete...")
 
 ### Opens AVL
 def AVL():
@@ -129,14 +147,14 @@ def results(planes,sm_ideal,tolerance):
     ax.set_ylabel("Lt (m)")
     ax.set_zlabel("SM")
 
-    solutions=["\nPossible configurations:\nSM:      Lt:    St:\n"]
+    solutions=["\nPossible configurations:\nSM:      Lt (mm):    St (m^2):\n"]
     for plane in planes:
         if math.isclose(plane.sm,sm_ideal,rel_tol=tolerance)==True:
             solutions.append(str(plane.sm)+"     "+str(plane.Lt)+"    "+str(plane.St)+"\n")
     if len(solutions)==1:
         print("No ideal configurations possible. Consider changing limits.")
     else:
-        solutions.append("\nConsider refining limits around possible configurations.")
+        solutions.append("\nConsider refining limits around possible configurations.\n")
         print("".join(solutions))
 
     return plt.show()
@@ -210,6 +228,7 @@ def generate_planes(ref_plane:list,St_lower,St_upper,Lt_lower,Lt_upper,steps,ARt
     return(planes)
 
 if __name__=="__main__":
+    os.system('cls')
     input_file="TAIL_CONFIG.txt"
 
     path=os.path.abspath(os.getcwd())
