@@ -7,7 +7,8 @@ class Plane:
                 np:float=None,
                 sm:float=None,
                 Lt:float=None,
-                St:float=None,
+                St_h:float=None,
+                St_v:float=None,
                 mac:float=None,
                 ARt:float=None,
                 span:float=None,
@@ -20,7 +21,10 @@ class Plane:
                 cases:list=None,
                 polars=None,
                 eigen_modes=None,
-                tail_config=None
+                tail_config=None,
+                b_th=None,
+                b_tv=None,
+                c_t=None
                 ):
 
         self.name=name
@@ -30,7 +34,8 @@ class Plane:
         self.np=np
         self.sm=sm
         self.Lt=Lt
-        self.St=St
+        self.St_h=St_h  #   Equivilent horizontal tail area
+        self.St_v=St_v  #   Equivilent vertical tail area
         self.mac=mac
         self.ARt=ARt
         self.span=span
@@ -44,6 +49,9 @@ class Plane:
         self.polars=polars
         self.eigen_modes=eigen_modes
         self.tail_config=tail_config
+        self.b_th=b_th
+        self.b_tv=b_tv
+        self.c_t=c_t
     
     def make_reference(self,plane_geom:list)->list:
         if self.name=="reference":
@@ -63,16 +71,14 @@ class Plane:
                     section=False
                     surface=False
                     ref_plane.append(line)  #   Adds the rest of the file
-            finless=list()
-            if self.tail_config=="inverted_V":
-                print("hi")
-                for line in ref_plane:
-                    if line.split()[0]=="Fin":
-                        finless=finless[:-1]
-                        break
-                    else:
-                        finless.append(line)
-                ref_plane=finless
+            finless=list()           
+            for line in ref_plane:  #   Removes fin surface. Lazy method.
+                if line.split()[0]=="Fin":
+                    finless=finless[:-1]
+                    break
+                else:
+                    finless.append(line)
+            ref_plane=finless
         
         else:
             print("Plane must be reference.")

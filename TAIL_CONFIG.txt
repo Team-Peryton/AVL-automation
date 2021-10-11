@@ -13,14 +13,15 @@ mass: 10
 
 #solver inputs Lunit=[mm], Sunit=[m2]
 Lt_upper: 1556
-Lt_lower: 1556
-St_upper: 0.117
-St_lower: 0.117
-points: 1
+Lt_lower: 1000
+St_upper: 0.1   (Equivilent horizontal tail area)
+St_lower: 0.3
+St_v= 0.06 (Equivilent vertical tail area = const.)
+points: 10
 
 SM_ideal: 0.3
 tolerance: 0.05
 
-tail_config: inverted_V (conventional/inverted_V)
+tail_config: convensional (conventional/inverted_V)
 
 threads: 8
