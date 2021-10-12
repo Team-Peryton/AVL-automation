@@ -6,6 +6,7 @@ class Plane:
                 Xcg:float=None,
                 np:float=None,
                 sm:float=None,
+                sm_ideal:float=None,
                 Lt:float=None,
                 St_h:float=None,
                 St_v:float=None,
@@ -33,6 +34,7 @@ class Plane:
         self.Xcg=Xcg
         self.np=np
         self.sm=sm
+        self.sm_ideal=sm_ideal
         self.Lt=Lt
         self.St_h=St_h  #   Equivilent horizontal tail area
         self.St_v=St_v  #   Equivilent vertical tail area
@@ -90,7 +92,10 @@ class Plane:
             lines=text.readlines()[50]
 
         self.np=float(lines.split()[-1])
-        self.sm=round((self.np-self.Xcg)/self.mac,2)
+        if self.Xcg!=None:
+            self.sm=round((self.np-self.Xcg)/self.mac,2)
+        else:
+            self.Xcg=round(self.np-(self.mac*self.sm_ideal),1)
 
     def make_dihedral_ref(self,plane_geom:list,split_Yle,aerofoil)->list:
         if self.name=="reference":
