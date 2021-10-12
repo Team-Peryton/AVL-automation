@@ -251,17 +251,17 @@ def results(planes,tolerance,calc_cg):
         ax.set_zlabel("SM")
 
         if planes[0].tail_config==0:
-            solutions=["\nPossible configurations:\nPlane ID:\tSM:\tLt (mm):\tSt_h (m^2):\n"]
+            solutions=["\nPossible configurations:\nPlane ID:\tSM:\tnp\tLt (mm):\tSt_h (m^2):\n"]
             for plane in planes:
                 if math.isclose(plane.sm,plane.sm_ideal,rel_tol=tolerance)==True:
                     solutions.append(plane.name.split("-")[0])
-                    solutions.append(f"\t\t{str(plane.sm)}\t{str(plane.Lt)}\t\t{str(plane.St_h)}\n")
+                    solutions.append(f"\t\t{str(plane.sm)}\t{str(plane.np)}\t{str(plane.Lt)}\t\t{str(plane.St_h)}\n")
         elif planes[0].tail_config==1:
-            solutions=["\nPossible configurations:\nPlane ID:\tSM:\tLt (mm)\tb (mm)\tc (mm)\tz (mm)\n"]
+            solutions=["\nPossible configurations:\nPlane ID:\tSM:\tnp\tLt (mm)\tb (mm)\tc (mm)\tz (mm)\n"]
             for plane in planes:
                 if math.isclose(plane.sm,plane.sm_ideal,rel_tol=tolerance)==True:
                     solutions.append(plane.name.split("-")[0])
-                    solutions.append(f"\t\t{str(plane.sm)}\t{str(plane.Lt)}\t{str(plane.b_th)}\t{str(plane.c_t)}\t{str(plane.b_tv)}\n")
+                    solutions.append(f"\t\t{str(plane.sm)}\t{str(plane.np)}\t{str(plane.Lt)}\t{str(plane.b_th)}\t{str(plane.c_t)}\t{str(plane.b_tv)}\n")
         if len(solutions)==1:
             print("\nNo ideal configurations possible. Consider changing limits.")
         else:
@@ -277,15 +277,15 @@ def results(planes,tolerance,calc_cg):
         ax.set_zlabel(f"Xcg for SM={planes[0].sm_ideal}")
 
         if planes[0].tail_config==0:
-            solutions=["\nPossible configurations:\nPlane ID:\tXcg:\tLt (mm):\tSt_h (m^2):\n"]
+            solutions=["\nPossible configurations:\nPlane ID:\tXcg:\tnp (mm)\tLt (mm):\tSt_h (m^2):\n"]
             for plane in planes:
                 solutions.append(plane.name.split("-")[0])
-                solutions.append(f"\t\t{str(plane.Xcg)}\t{str(plane.Lt)}\t\t{str(plane.St_h)}\n")
+                solutions.append(f"\t\t{str(plane.Xcg)}\t{str(plane.np)}\t{str(plane.Lt)}\t\t{str(plane.St_h)}\n")
         elif planes[0].tail_config==1:
-            solutions=["\nPossible configurations:\nPlane ID:\tXcg:\tLt (mm)\tb (mm)\tc (mm)\tz (mm)\n"]
+            solutions=["\nPossible configurations:\nPlane ID:\tXcg:\tnp (mm)\tLt (mm)\tb (mm)\tc (mm)\tz (mm)\n"]
             for plane in planes:
                 solutions.append(plane.name.split("-")[0])
-                solutions.append(f"\t\t{str(plane.Xcg)}\t{str(plane.Lt)}\t{str(plane.b_th)}\t{str(plane.c_t)}\t{str(plane.b_tv)}\n")
+                solutions.append(f"\t\t{str(plane.Xcg)}\t{str(plane.np)}\t{str(plane.Lt)}\t{str(plane.b_th)}\t{str(plane.c_t)}\t{str(plane.b_tv)}\n")
         print("".join(solutions))
 
     plt.show()
