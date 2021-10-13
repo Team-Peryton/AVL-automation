@@ -251,13 +251,13 @@ def results(planes,tolerance,calc_cg):
         ax.set_zlabel("SM")
 
         if planes[0].tail_config==0:
-            solutions=["\nPossible configurations:\nPlane ID:\tSM:\tnp\tLt (mm):\tSt_h (m^2):\n"]
+            solutions=["\nPossible configurations:\nPlane ID:\tSM:\tnp\t\tLt (mm):\tSt_h (m^2):\n"]
             for plane in planes:
                 if math.isclose(plane.sm,plane.sm_ideal,rel_tol=tolerance)==True:
                     solutions.append(plane.name.split("-")[0])
                     solutions.append(f"\t\t{str(plane.sm)}\t{str(plane.np)}\t{str(plane.Lt)}\t\t{str(plane.St_h)}\n")
         elif planes[0].tail_config==1:
-            solutions=["\nPossible configurations:\nPlane ID:\tSM:\tnp\tLt (mm)\tb (mm)\tc (mm)\tz (mm)\n"]
+            solutions=["\nPossible configurations:\nPlane ID:\tSM:\tnp\t\tLt (mm)\tb (mm)\tc (mm)\tz (mm)\n"]
             for plane in planes:
                 if math.isclose(plane.sm,plane.sm_ideal,rel_tol=tolerance)==True:
                     solutions.append(plane.name.split("-")[0])
