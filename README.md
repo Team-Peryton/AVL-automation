@@ -3,7 +3,8 @@ Wraps avl. Code is very messy. You have been warned.
 
 #### Tail Sizing
 - Suggests tail configurations based on input geometry to achieve a desired static margin.
-- Currently only works with conventional configurations.
+- Works for convensional & inverted V configurations.
+- Can be run in reverse i.e. input tail dimensions & output optimal CG location
 
 #### Dihedral
 - Generates wing configurations with varying dihedral angle and set spanwise dihedral location. 
