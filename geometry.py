@@ -91,7 +91,7 @@ class Plane:
         with open(self.results_file,'r') as text:
             lines=text.readlines()[50]
 
-        self.np=float(lines.split()[-1])
+        self.np=round(float(lines.split()[-1]),1)
         if self.Xcg!=None:
             self.sm=round((self.np-self.Xcg)/self.mac,2)
         else:
