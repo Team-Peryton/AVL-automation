@@ -1,5 +1,5 @@
 from typing import Counter
-from avl_aero_coefficients import Aero
+from avl_polars import Aero
 from geometry import Plane,Section
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor,as_completed
 from multiprocessing import freeze_support
@@ -187,24 +187,32 @@ def eigenvalues(planes,analysis):
     roll_damping=[plane.eigen_modes["roll"][0] for plane in planes]
     dutch_damping=[plane.eigen_modes["dutch"][0] for plane in planes]
 
-    #df=pd.DataFrame(list(zip(dihedral_angles,roll_damping,dutch_damping)), columns=["Angle","Roll","Dutch"])
-    #print(df)
-
-    eigenplt,roll=plt.subplots()
+    df=pd.DataFrame(list(zip(dihedral_angles,roll_damping,dutch_damping)), columns=["Angle (deg)","Roll Damping (/s)","Dutch Damping (/s)"])
+    """
+    try:
+        df.to_excel("dihedral results.xlsx")
+    except PermissionError:
+        print("! Could not write dihedral results. Close excel. !")
+        pass
+    """
+    plt.figure()
     plt.title("Eigenmode Damping for Dihedral Angles")
+    plt.xlabel(f"Dihedral Angle (deg)\nSplit Location={[plane.dihedral_split for plane in planes][0]}% of Span")
+    plt.ylabel("Damping (/s)")
 
-    red='r'
-    roll.set_xlabel(f"Dihedral Angle (deg)\nSplit Location={[plane.dihedral_split for plane in planes][0]}% of Span")
-    roll.set_ylabel("Roll Damping (/s)",color=red)
-    roll.plot(dihedral_angles,roll_damping,color=red)
-
-    dutch=roll.twinx()
-    blue='b'
-    dutch.set_ylabel("Dutch Roll Damping (/s)",color=blue)
-    dutch.plot(dihedral_angles,dutch_damping,color=blue)
-
-    eigenplt.tight_layout()
-    #plt.show()
+    plt.plot(dihedral_angles,roll_damping,color='r',label="Roll")
+    plt.plot(dihedral_angles,dutch_damping,color='b',label="Dutch Roll")
+    plt.legend()
+    plt.tight_layout()
+    
+    print(f"%diff between {dihedral_angles[0]}-{dihedral_angles[-1]}deg of dihedral:")
+    print(f"Roll Damping:\t{round(100*(abs(roll_damping[0])-abs(roll_damping[-1]))/abs(roll_damping[0]),1)}")
+    print(f"Dutch Damping:\t{round(100*(abs(dutch_damping[0])-abs(dutch_damping[-1]))/abs(dutch_damping[0]),1)}")
+    
+    a1=planes[0].polars['Alpha (deg)'].iloc[-1]
+    Cl0=planes[0].polars['Cl'].iloc[-1]
+    Cl1=planes[-1].polars['Cl'].iloc[-1]   
+    print(f"Cl ({a1}deg):\t{round(100*((Cl1-Cl0)/Cl0),1)}")
 
     return plt
 
