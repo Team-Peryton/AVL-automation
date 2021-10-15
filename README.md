@@ -7,9 +7,9 @@ Wraps avl. Code is very messy. You have been warned.
 - Can be run in reverse i.e. input tail dimensions & output optimal CG location
 
 #### Dihedral
-- Generates wing configurations with varying dihedral angle and set spanwise dihedral location. 
+- Generates wing configurations with varying dihedral angle with a set spanwise dihedral location. 
 - Calculates roll and dutch roll damping modes for each configuration.
-- Runs aero analysis, generating Cl and Cd polars.
+- Runs aero analysis, generating Cl and Cd polars, and relevant stability derivatives.
 
 
 #### avl_aero_coefficients.py useage:
