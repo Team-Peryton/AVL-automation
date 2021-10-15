@@ -12,8 +12,8 @@ Wraps avl. Code is very messy. You have been warned.
 - Runs aero analysis, generating Cl and Cd polars, and relevant stability derivatives.
 
 
-#### avl_aero_coefficients.py useage:
-
+#### aero.py useage:
+(very scuffed)
 ```
 analysis=Aero("AERO_CONFIG.txt")
 cases=analysis.initialize_cases()
