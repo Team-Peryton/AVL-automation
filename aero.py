@@ -1,4 +1,5 @@
 import subprocess as sp
+from matplotlib.pyplot import clabel
 from numpy import linspace
 import os
 import shutil
@@ -6,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor,ProcessPoolExecutor
 import pandas as pd
 
 class Case():
-    def __init__(self,Xcg,Ycg,Zcg,Ixx,Iyy,Izz,mass,velocity,alpha,case_file=None,results_file=None,Cl=None,Cd=None,eigen=False,id=False):
+    def __init__(self,Xcg,Ycg,Zcg,Ixx,Iyy,Izz,mass,velocity,alpha,case_file=None,results_file=None,Cl=None,Cd=None,eigen=False,id=False,Clb=None,Clp=None,spiral=None):
         self.Xcg=Xcg
         self.Ycg=Ycg
         self.Zcg=Zcg
@@ -22,6 +23,9 @@ class Case():
         self.results_file=results_file
         self.eigen=eigen
         self.id=id
+        self.Clb=Clb
+        self.Clp=Clp
+        self.spiral=spiral
 
 ########################    INPUT & RUN    ##############################
 class Aero():
@@ -37,7 +41,6 @@ class Aero():
             shutil.rmtree(path+"/results")
         os.mkdir(path+"/results")
 
-    ### Main run function.
     def initialize_cases(self):
         """
         Creates case strings for each alpha and writes to file. 
@@ -133,7 +136,7 @@ class Aero():
         if case.eigen==True:
             run+="\nmode\n N\n W\n"   #   Run eigenvalue analysis
         else:
-            run+="ft\n" #   View stability derivatives
+            run+="st\n" #   View stability derivatives
         case.results_file="".join(["results/",plane.name.split("-")[0],"-",str(case.alpha),"deg.aero" if case.eigen==False else "deg.eig"])       
         run+=case.results_file+"\n"    #   Saves results
         
@@ -143,15 +146,18 @@ class Aero():
 
     ########################    RESULTS    ##############################
 
-    #@staticmethod
+    @staticmethod
     def read_aero(case):
         with open(case.results_file,'r') as file:
             lines=file.readlines()
 
             Cl=float(lines[23].split()[2])
             Cd=float(lines[24].split()[2])
-        
-        return Cl,Cd
+            Clb=float(lines[38].split()[8])
+            Clp=float(lines[46].split()[5])
+            spiral=float(lines[52].split()[6])
+
+        return Cl,Cd,Clb,Clp,spiral
 
     @staticmethod
     def read_eigen(plane,case):
