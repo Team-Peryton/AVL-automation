@@ -97,30 +97,31 @@ class Plane:
         else:
             self.Xcg=round(self.np-(self.mac*self.sm_ideal),1)
 
-    def make_dihedral_ref(self,plane_geom:list,split_Yle,aerofoil)->list:
+    def make_dihedral_ref(self,plane_geom:list)->list:
         if self.name=="reference":
             ref_plane_geom=list()
+            
             surface=False
             section=False
-
-            count=0
             for index,line in enumerate(plane_geom):
-                if line=="Main Wing\n": #   Finds elevator surface
+                if line=="Main Wing\n": #   Finds main wing
                     surface=True
-                if line.split()[0]=="SECTION" and surface==True:    #   Finds section
+                if line.split()[0]=="SECTION" and surface==True and section==False:
+                    start=index #   Finds start of section definitions
                     section=True
-                    self.Xle=plane_geom[index+1].split()[0]  #   Gets wing X location  
-                    count+=1       
-                if count<2 or section==False:   #   Adds everything that isn't section 
-                    ref_plane_geom.append(line)     
-                if line.split()[0]=="SURFACE" and surface==True:    #   Finds next surface
-                    if split_Yle!=0:
-                        split=Section(self.Xle,split_Yle,0,self.mac,10,-1,aerofoil)  #   Generates split section
-                        ref_plane_geom.append("\n"+split.create_input()+"\n")   #   Adds split section
-                    ref_plane_geom.append("YES PLEASE\n")    #   Adds marker for adding new sections
-                    section=False
-                    surface=False
-                    ref_plane_geom.append(line)  #   Adds the rest of the file
+                    self.Xle=plane_geom[index+1].split()[0] #   Gets wing X location
+                if line.split()[0]=="SURFACE" and surface==True:
+                    surface=False   #   Finds end of section definitions
+                    end=index
+            delete=False
+            for index,line in enumerate(plane_geom):
+                if index==start:
+                    delete=True
+                    ref_plane_geom.append("YES PLEASE\n")   #   Adds marker for inserting wing sections
+                elif index==end:
+                    delete=False
+                if delete!=True:
+                    ref_plane_geom.append(line) #   Adds rest of geometry 
 
         return ref_plane_geom
 
