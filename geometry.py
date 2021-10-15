@@ -1,174 +1,190 @@
-class Plane:
-    def __init__(self,
-                name:str,
-                geom_file:str=None,
-                results_file:str=None,
-                Xcg:float=None,
-                np:float=None,
-                sm:float=None,
-                sm_ideal:float=None,
-                Lt:float=None,
-                St_h:float=None,
-                St_v:float=None,
-                mac:float=None,
-                ARt:float=None,
-                span:float=None,
-                dihedral_angle:float=None,
-                dihedral_split:float=None,
-                dihedral_splitY:float=None,
-                tipY:float=None,
-                tipZ:float=None,
-                Xle:float=None,
-                cases:list=None,
-                polars=None,
-                eigen_modes=None,
-                tail_config=None,
-                b_th=None,
-                b_tv=None,
-                c_t=None
-                ):
+import subprocess as sp
+from matplotlib.pyplot import clabel
+from numpy import linspace
+import os
+import shutil
+from concurrent.futures import ThreadPoolExecutor,ProcessPoolExecutor
+import pandas as pd
 
-        self.name=name
-        self.geom_file=geom_file
-        self.results_file=results_file
+class Case():
+    def __init__(self,Xcg,Ycg,Zcg,Ixx,Iyy,Izz,mass,velocity,alpha,case_file=None,results_file=None,Cl=None,Cd=None,eigen=False,id=False,Clb=None,Clp=None,spiral=None):
         self.Xcg=Xcg
-        self.np=np
-        self.sm=sm
-        self.sm_ideal=sm_ideal
-        self.Lt=Lt
-        self.St_h=St_h  #   Equivilent horizontal tail area
-        self.St_v=St_v  #   Equivilent vertical tail area
-        self.mac=mac
-        self.ARt=ARt
-        self.span=span
-        self.dihedral_angle=dihedral_angle
-        self.dihedral_split=dihedral_split
-        self.dihedral_splitY=dihedral_splitY
-        self.tipY=tipY
-        self.tipZ=tipZ
-        self.Xle=Xle
-        self.cases=cases
-        self.polars=polars
-        self.eigen_modes=eigen_modes
-        self.tail_config=tail_config
-        self.b_th=b_th
-        self.b_tv=b_tv
-        self.c_t=c_t
-    
-    def make_reference(self,plane_geom:list)->list:
-        if self.name=="reference":
-            ref_plane=list()
-            surface=False
-            section=False
+        self.Ycg=Ycg
+        self.Zcg=Zcg
+        self.Ixx=Ixx
+        self.Iyy=Iyy
+        self.Izz=Izz
+        self.mass=mass
+        self.velocity=velocity
+        self.alpha=alpha
+        self.case_file=case_file
+        self.Cl=Cl
+        self.Cd=Cd
+        self.results_file=results_file
+        self.eigen=eigen
+        self.id=id
+        self.Clb=Clb
+        self.Clp=Clp
+        self.spiral=spiral
+
+########################    INPUT & RUN    ##############################
+class Aero():
+    def __init__(self,input_file,polars=None):
+        self.input_file=input_file
+        self.inputs=self.load_inputs()
+
+        path=os.path.abspath(os.getcwd())
+        if os.path.isdir(path+"/cases")==True:
+            shutil.rmtree(path+"/cases")
+        os.mkdir(path+"/cases")
+        if os.path.isdir(path+"/results")==True:
+            shutil.rmtree(path+"/results")
+        os.mkdir(path+"/results")
+
+    def initialize_cases(self):
+        """
+        Creates case strings for each alpha and writes to file. 
+        """       
+        #   Creates alpha range
+        alpha_range=linspace(
+                            self.inputs["alpha0"],
+                            self.inputs["alpha1"],
+                            int(1+(self.inputs["alpha1"]-self.inputs["alpha0"])/self.inputs["increment"])
+                            )
+        #   Initiates class objects
+        cases=[Case(self.inputs["Xcg"],self.inputs["Ycg"],self.inputs["Zcg"],self.inputs["Ixx"],self.inputs["Iyy"],self.inputs["Izz"],self.inputs["mass"],self.inputs["velocity"],alpha) for alpha in alpha_range]
         
-            for line in plane_geom:              
-                if line.split()[0]=="Elevator": #   Finds elevator surface
-                    surface=True
-                if line.split()[0]=="SECTION" and surface==True:    #   Finds section
-                    section=True  
-                if section!=True:   #   Adds everything that isn't section 
-                    ref_plane.append(line)     
-                if line.split()[0]=="SURFACE" and surface==True:    #   Finds next surface
-                    ref_plane.append("YES PLEASE\n")    #   Adds marker for adding new sections
-                    section=False
-                    surface=False
-                    ref_plane.append(line)  #   Adds the rest of the file
-            finless=list()           
-            for line in ref_plane:  #   Removes fin surface. Lazy method.
-                if line.split()[0]=="Fin":
-                    finless=finless[:-1]
-                    break
-                else:
-                    finless.append(line)
-            ref_plane=finless
+        #   Writes case files & adds filepath to case obj
+        tasks=[case for case in cases]
+        with ThreadPoolExecutor(max_workers=self.inputs["threads"]) as pool:
+            pool.map(self.case_create,tasks)
+
+        return cases
+
+    ### Loads inputs... 
+    def load_inputs(self):
+        with open(self.input_file,'r') as file:
+            lines=file.readlines()
         
+        try:
+            inputs={"mass":float(lines[1].split()[1]),
+                    "Xcg":float(lines[2].split()[1]),
+                    "Ycg":float(lines[3].split()[1]),
+                    "Zcg":float(lines[4].split()[1]),
+                    "Ixx":float(lines[5].split()[1]),
+                    "Iyy":float(lines[6].split()[1]),
+                    "Izz":float(lines[7].split()[1]),
+                    "velocity":float(lines[9].split()[1]),
+                    "alpha0":float(lines[11].split()[1]),
+                    "alpha1":float(lines[12].split()[1]),
+                    "increment":float(lines[13].split()[1]),
+                    "threads":int(lines[15].split()[1]),
+                    "units":lines[16].split()[1]
+                    }
+        except IndexError:
+            print("Parameters must have a value assigned. (AERO_CONFIG.txt)")
+            exit()
+
+        return(inputs)
+    ########################    ANALYSIS    ##############################
+
+    ### Opens AVL
+    def AVL(self):
+        return sp.Popen(['avl.exe'],
+                    stdin=sp.PIPE,
+                    stdout=sp.PIPE,
+                    stderr=sp.PIPE)
+
+    ### Write command to AVL
+    def issueCmd(self,cmd: str):
+        self.AVL().communicate(input=cmd.encode())
+
+    ### Creates case file according to AVL format.
+    def case_create(self,tasks)->str:
+        case=tasks
+
+        case_str="\n---------------------------------------------\n"
+        case_str+="Run case  1:\n\n"
+        case_str+="alpha -> alpha = {0}\n".format(case.alpha)
+        case_str+="X_cg={0} Lunit\n".format(case.Xcg)
+        case_str+="Y_cg={0} Lunit\n".format(case.Ycg)
+        case_str+="Z_cg={0} Lunit\n".format(case.Zcg)
+        case_str+="mass={0} kg\n".format(case.mass)
+        case_str+="Ixx={0} kg-m^2\n".format(case.Ixx)
+        case_str+="Iyy={0} kg-m^2\n".format(case.Iyy)
+        case_str+="Izz={0} kg-m^2\n".format(case.Izz)
+        case_str+="velocity={0} m/s\n".format(case.velocity)
+        case_str+="density=1.225 kg-m^3\n"
+        case_str+="grav.acc.=0.98 m/s^2\n"
+        
+        path="cases/"+str(case.alpha)+"deg.txt"
+
+        with open(path,'w') as file:    #   Saves case file
+            file.write(case_str)
+        case.case_file=path
+        
+    ### Runs analysis through AVL interface options & saves stability derivatives.
+    def analysis(self,plane,case)->str:
+        """
+        Runs aero analysis.
+        """     
+        run="load {0}\n".format(plane.geom_file)    #   Load plane
+        run+="case {0}\n".format(case.case_file)  #   Load case
+        run+="mass {0}\n".format(self.inputs["units"])
+        run+="oper\n o\n v\n\n x\n"   #   Run analysis
+
+        if case.eigen==True:
+            run+="\nmode\n N\n W\n"   #   Run eigenvalue analysis
         else:
-            print("Plane must be reference.")
-            
-        return ref_plane
+            run+="st\n" #   View stability derivatives
+        case.results_file="".join(["results/",plane.name.split("-")[0],"-",str(case.alpha),"deg.aero" if case.eigen==False else "deg.eig"])       
+        run+=case.results_file+"\n"    #   Saves results
+        
+        self.issueCmd(run)
 
-    def calc_SM(self):
-        with open(self.results_file,'r') as text:
-            lines=text.readlines()[50]
+        pass
 
-        self.np=round(float(lines.split()[-1]),1)
-        if self.Xcg!=None:
-            self.sm=round((self.np-self.Xcg)/self.mac,2)
-        else:
-            self.Xcg=round(self.np-(self.mac*self.sm_ideal),1)
+    ########################    RESULTS    ##############################
 
-    def make_dihedral_ref(self,plane_geom:list)->list:
-        if self.name=="reference":
-            ref_plane_geom=list()
-            
-            surface=False
-            section=False
-            for index,line in enumerate(plane_geom):
-                if line=="Main Wing\n": #   Finds main wing
-                    surface=True
-                if line.split()[0]=="SECTION" and surface==True and section==False:
-                    start=index #   Finds start of section definitions
-                    section=True
-                    self.Xle=plane_geom[index+1].split()[0] #   Gets wing X location
-                if line.split()[0]=="SURFACE" and surface==True:
-                    surface=False   #   Finds end of section definitions
-                    end=index
-            delete=False
-            for index,line in enumerate(plane_geom):
-                if index==start:
-                    delete=True
-                    ref_plane_geom.append("YES PLEASE\n")   #   Adds marker for inserting wing sections
-                elif index==end:
-                    delete=False
-                if delete!=True:
-                    ref_plane_geom.append(line) #   Adds rest of geometry 
+    @staticmethod
+    def read_aero(case):
+        with open(case.results_file,'r') as file:
+            lines=file.readlines()
 
-        return ref_plane_geom
+            Cl=float(lines[23].split()[2])
+            Cd=float(lines[24].split()[2])
+            Clb=float(lines[38].split()[8])
+            Clp=float(lines[46].split()[5])
+            try:
+                spiral=float(lines[52].split()[6])
+            except IndexError:
+                print("! No vertical stabilisation !")
+                spiral=0
+                pass
 
-class Surface():
-    #Creates surface (eg wing type)
-    def __init__(self,name,nchord,cspace,component,aerofoil,y_duplicate=None,angle=None):
-        self.name=name
-        self.nchord=nchord
-        self.cspace=cspace
-        self.component=component
-        self.y_duplicate=y_duplicate
-        self.angle=angle
-        self.aerofoil=aerofoil
+        return Cl,Cd,Clb,Clp,spiral
 
-    def create_input(self):
-        surf_str="{0}\n#Nchord Cspace\n".format(self.name)
-        surf_str+="{0} {1}\n".format(self.nchord,self.cspace)
+    @staticmethod
+    def read_eigen(plane,case):
+        with open(case.results_file,'r') as file:
+            lines=file.readlines()
 
-        if self.y_duplicate is not None:
-            surf_str+="COMPONENT\n{0}\n".format(self.component)
-        surf_str+="YDUPLICATE\n{0}\n".format(self.y_duplicate)
-        surf_str+="SCALE\n1 1 1\n"
-        surf_str+="TRANSLATE\n0 0 0\n"
-        if self.angle is not None:
-            surf_str+="ANGLE\n{0}\n".format(self.angle)
+            try:
+                modes={"dutch":tuple(map(float,lines[3].split()[1:])),
+                        #"-dutch":tuple(map(float,lines[4].split()[1:])),
+                        "roll":tuple(map(float,lines[5].split()[1:])),
+                        #"short":tuple(map(float,lines[6].split()[1:])),
+                        #"-short":tuple(map(float,lines[7].split()[1:])),
+                        #"lateral":tuple(map(float,lines[8].split()[1:])),
+                        #"phugoid":tuple(map(float,lines[9].split()[1:])),
+                        #"-phugoid":tuple(map(float,lines[10].split()[1:])),
+                        }
+            except IndexError as e:
+                print(f"Eigenmode analysis/read failed: Case {case.results_file}")
+                print(f"\n{e}")
+                exit()
+        modes_df=pd.DataFrame.from_dict(modes,orient='index',columns=["Damping Ratio","Frequency"])
+        #print(modes_df)
+        plane.eigen_modes=modes
 
-        return surf_str
-
-class Section():
-    def __init__(self,Xle,Yle,Zle,chord,nspan,sspace,aerofoil):
-        self.Xle=Xle
-        self.Yle=Yle
-        self.Zle=Zle
-        self.chord=chord
-        self.nspan=nspan
-        self.sspace=sspace
-        self.aerofoil=aerofoil
-
-    def create_input(self):
-        section_str="SECTION\n#Xle Yle Zle Chord Ainc Nspan Sspace\n"
-        section_str+="{0} {1} {2} {3} {4} {5} {6}\n".format(self.Xle,
-                                                            self.Yle,
-                                                            self.Zle,
-                                                            self.chord,
-                                                            0,
-                                                            self.nspan,
-                                                            self.sspace)
-        section_str+="AFIL 0.0.1.0\n{0}\n".format(self.aerofoil)
-
-        return section_str
+        pass
