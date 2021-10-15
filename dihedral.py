@@ -230,16 +230,6 @@ def eigenvalues(planes,analysis):
     plt.legend()
     plt.tight_layout()
     
-    """
-    print(f"%diff between {dihedral_angles[0]}-{dihedral_angles[-1]}deg of dihedral:")
-    print(f"Roll Damping:\t{round(100*(abs(roll_damping[0])-abs(roll_damping[-1]))/abs(roll_damping[0]),1)}")
-    print(f"Dutch Damping:\t{round(100*(abs(dutch_damping[0])-abs(dutch_damping[-1]))/abs(dutch_damping[0]),1)}")
-    
-    a1=planes[0].polars['Alpha (deg)'].iloc[-1]
-    Cl0=planes[0].polars['Cl'].iloc[-1]
-    Cl1=planes[-1].polars['Cl'].iloc[-1]   
-    print(f"Cl ({a1}deg):\t{round(100*((Cl1-Cl0)/Cl0),1)}")
-    """
     return plt
 
 def geom_plot(planes):
