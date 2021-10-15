@@ -1,5 +1,5 @@
 # AVL-Wrapper
-Wraps avl. Code is very messy. You have been warned.
+Wraps avl. Code is highly scuffed. You have been warned.
 
 #### Tail Sizing
 - Suggests tail configurations based on input geometry to achieve a desired static margin.
