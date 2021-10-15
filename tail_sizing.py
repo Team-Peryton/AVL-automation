@@ -29,19 +29,23 @@ def load_inputs(input_file):
             "Lt_lower":float(lines[15].split()[1]),
             "St_h_upper":float(lines[16].split()[1]),
             "St_h_lower":float(lines[17].split()[1]),
-            "St_v":float(lines[18].split()[1]),
-            "steps":int(lines[19].split()[1]),
-            "sm_ideal":float(lines[21].split()[1]),
-            "tolerance":float(lines[22].split()[1]),
-            "config":float(lines[24].split()[1]),
-            "threads":int(lines[26].split()[1]),
+            "b_th":lines[18].split()[1],
+            "St_v":float(lines[19].split()[1]),
+            "steps":int(lines[20].split()[1]),
+            "sm_ideal":float(lines[22].split()[1]),
+            "tolerance":float(lines[23].split()[1]),
+            "config":float(lines[25].split()[1]),
+            "threads":int(lines[27].split()[1]),
             "calc_cg":False
             }
+
+    if inputs["b_th"]!="-":
+        inputs["b_th"]=float(inputs["b_th"])
 
     if inputs["Lt_lower"]==0 or inputs["St_h_lower"]==0:
         print("Input non-zero lower bound.")
         exit()
-
+    
     if inputs["Xcg"]=="-" and inputs["Ycg"]=="-" and inputs["Zcg"]=="-":
         inputs["calc_cg"]=True
     else:
@@ -68,7 +72,8 @@ def run(input_file):
                             inputs["St_v"],
                             inputs["config"],
                             inputs["calc_cg"],
-                            inputs["sm_ideal"]
+                            inputs["sm_ideal"],
+                            inputs["b_th"]
                             )
     
     #   Run analysis   
@@ -120,13 +125,13 @@ def make_ref_plane(plane_geom:list,tail_config:str)->tuple:
     return tuple(ref_plane_geom)
 
 ### Creates modified plane object
-def generate_planes(ref_plane:list,St_h_lower,St_h_upper,Lt_lower,Lt_upper,steps,ARt,mac,aerofoil,Xcg,St_v,config,calc_cg,sm_ideal)->object:
+def generate_planes(ref_plane:list,St_h_lower,St_h_upper,Lt_lower,Lt_upper,steps,ARt,mac,aerofoil,Xcg,St_v,config,calc_cg,sm_ideal,b_th)->object:
     planes=list()
     count=0
     a=0
     for St_h in numpy.linspace(St_h_lower,St_h_upper,steps):
         for Lt in numpy.linspace(Lt_lower,Lt_upper,steps):
-            St_h=round(St_h,2)
+            St_h=round(float(St_h),2)
             Lt=round(Lt,2)
 
             name=str(count)+"-"+str(St_h)+"St_h-"+str(Lt)+"Lt"  #   Creates plane name
@@ -140,17 +145,24 @@ def generate_planes(ref_plane:list,St_h_lower,St_h_upper,Lt_lower,Lt_upper,steps
             plane.tail_config=config
 
             mod_geom=list(ref_plane)
-            chord=round(math.sqrt(St_h/ARt)*1000,3)     #   Calculates HTP chord (mm)
-            Zle=round((St_v*(1000**2))/(2*chord),3)         #   Calculates tip height (inverted v tail) (mm)
-            span=round(math.sqrt(St_h*ARt)*1000,3)      #   Calculates HTP span (mm)
-            
+            if b_th!="-":   #   if span constraint used:
+                chord=round((St_h*1000**2)/b_th,3)    #   Calculate chord based off span & area, not area & AR
+                span=b_th
+            else:
+                chord=round(math.sqrt(St_h/ARt)*1000,3)     #   Calculates h chord based on area & AR
+                span=round(math.sqrt(St_h*ARt)*1000,3)      #   Calculates HTP span (mm)
+            try:
+                Zle=round((St_v*(1000**2))/(2*chord),3)         #   Calculates tip height (inverted v tail) (mm)
+            except:
+                exit()
+
             plane.b_th=round(span,0)
             plane.b_tv=round(Zle,0)
             plane.c_t=round(chord,0)
 
-            if config==0:
+            if config==0 and b_th=="-":                
                 root=Section(Lt,0,0,chord,10,-1,aerofoil)    #   Defines root section (object)
-            elif config==1:
+            elif config==1:          
                 root=Section(Lt,0,Zle,chord,10,-1,aerofoil)
             else:
                 print("\nInvalid configuration selected.")
@@ -242,6 +254,11 @@ def results(planes,tolerance,calc_cg):
     x=[plane.St_h for plane in planes]
     y=[plane.Lt for plane in planes]
 
+    if planes[0].tail_config==1:
+            zz="z (mm):"
+    else:
+        zz=""
+
     if calc_cg==False:
         z=[plane.sm for plane in planes]
 
@@ -249,19 +266,13 @@ def results(planes,tolerance,calc_cg):
         ax.set_xlabel("St_h (m^2)")
         ax.set_ylabel("Lt (m)")
         ax.set_zlabel("SM")
-
-        if planes[0].tail_config==0:
-            solutions=["\nPossible configurations:\nPlane ID:\tSM:\tnp\t\tLt (mm):\tSt_h (m^2):\n"]
-            for plane in planes:
-                if math.isclose(plane.sm,plane.sm_ideal,rel_tol=tolerance)==True:
-                    solutions.append(plane.name.split("-")[0])
-                    solutions.append(f"\t\t{str(plane.sm)}\t{str(plane.np)}\t{str(plane.Lt)}\t\t{str(plane.St_h)}\n")
-        elif planes[0].tail_config==1:
-            solutions=["\nPossible configurations:\nPlane ID:\tSM:\tnp\t\tLt (mm)\tb (mm)\tc (mm)\tz (mm)\n"]
-            for plane in planes:
-                if math.isclose(plane.sm,plane.sm_ideal,rel_tol=tolerance)==True:
-                    solutions.append(plane.name.split("-")[0])
-                    solutions.append(f"\t\t{str(plane.sm)}\t{str(plane.np)}\t{str(plane.Lt)}\t{str(plane.b_th)}\t{str(plane.c_t)}\t{str(plane.b_tv)}\n")
+ 
+        solutions=[f"\nPossible configurations:\nPlane ID:\tSM:\tnp\tLt (mm):\tb (mm):\tc (mm):\t{zz}\n"]
+        for plane in planes:
+            if math.isclose(plane.sm,plane.sm_ideal,rel_tol=tolerance)==True:
+                solutions.append(plane.name.split("-")[0])
+                solutions.append(f"\t\t{str(plane.sm)}\t{str(plane.np)}\t{str(plane.Lt)}\t\t{str(plane.b_th)}\t{str(plane.c_t)}\t{str(plane.b_tv if zz!='' else '')}\n")
+        
         if len(solutions)==1:
             print("\nNo ideal configurations possible. Consider changing limits.")
         else:
@@ -276,16 +287,11 @@ def results(planes,tolerance,calc_cg):
         ax.set_ylabel("Lt (m)")
         ax.set_zlabel(f"Xcg for SM={planes[0].sm_ideal}")
 
-        if planes[0].tail_config==0:
-            solutions=["\nPossible configurations:\nPlane ID:\tXcg:\tnp (mm)\tLt (mm):\tSt_h (m^2):\n"]
-            for plane in planes:
-                solutions.append(plane.name.split("-")[0])
-                solutions.append(f"\t\t{str(plane.Xcg)}\t{str(plane.np)}\t{str(plane.Lt)}\t\t{str(plane.St_h)}\n")
-        elif planes[0].tail_config==1:
-            solutions=["\nPossible configurations:\nPlane ID:\tXcg:\tnp (mm)\tLt (mm)\tb (mm)\tc (mm)\tz (mm)\n"]
-            for plane in planes:
-                solutions.append(plane.name.split("-")[0])
-                solutions.append(f"\t\t{str(plane.Xcg)}\t{str(plane.np)}\t{str(plane.Lt)}\t{str(plane.b_th)}\t{str(plane.c_t)}\t{str(plane.b_tv)}\n")
+        solutions=["\nPossible configurations:\nPlane ID:\tXcg:\tnp (mm)\tLt (mm):\tb (mm):\tc (mm):\t{zz}\n"]
+        for plane in planes:
+            solutions.append(plane.name.split("-")[0])
+            solutions.append(f"\t\t{str(plane.Xcg)}\t{str(plane.np)}\t{str(plane.Lt)}\t\t{str(plane.b_th)}\t{str(plane.c_t)}\t{str(plane.b_tv if zz!='' else '')}\n")
+
         print("".join(solutions))
 
     plt.show()
@@ -308,5 +314,3 @@ if __name__=="__main__":
     os.mkdir(path+"/cases")
 
     run(input_file)
-
-    
