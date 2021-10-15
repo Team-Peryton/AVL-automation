@@ -16,7 +16,7 @@ def load_inputs(input_file):
     with open(input_file,'r') as f:
         lines=f.readlines()
     
-    inputs={"input_plane":lines[1].split()[1],
+    inputs={"input_plane":lines[1].split(": ")[1:][0].strip(),
             "aero_config":lines[2].split()[1],
             "wing_aerofoil":lines[4].split(": ")[1:][0],
             "elevator_aerofoil":lines[5].split(": ")[1:][0],
