@@ -8,10 +8,10 @@ fin_aerofoil: NACA 0012H.dat
 
 #dihedral parameters
 angle_min: 0 deg
-angle_max: 10 deg
+angle_max: 5 deg
 increment: 1 deg
 
-span_loc: 30 %
+span_loc: 0 %
 
 threads: 8
-show polar plot?: Y (Y/N)
+show geometry plot?: N (Y/N)
