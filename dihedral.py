@@ -1,5 +1,5 @@
 from typing import Counter
-from avl_polars import Aero
+from aero import Aero
 from geometry import Plane,Section
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor,as_completed
 from multiprocessing import freeze_support
@@ -26,7 +26,7 @@ def load_inputs(input_file):
             "increment":int(lines[11].split()[1]),
             "span_loc":float(lines[13].split()[1]),
             "threads":float(lines[15].split()[1]),
-            "show_plt":lines[16].split(": ")[1][0]
+            "show_geom_plt":lines[16].split(": ")[1][0]
             }
 
     return inputs
@@ -61,8 +61,8 @@ def run(input_file):
 
     print("Reading polar results...")
     polars(planes)
-    if inputs["show_plt"]=="Y":
-        plot_polars(planes)
+    
+    plot_polars(planes)
 
     tasks=[]
     for plane in planes:
@@ -77,8 +77,8 @@ def run(input_file):
     
     print("Reading eigenmode results...\n")
     eigenvalues(planes,analysis)
-
-    geom_plot(planes)
+    if inputs["show_geom_plt"]=="Y":
+        geom_plot(planes)
 
     plt.show()
 
@@ -87,7 +87,7 @@ def run(input_file):
 def make_ref_plane(plane_geom:list,mac,span,span_loc,wing_aerofoil)->tuple:
     ref_plane=Plane("reference",mac=mac)    #   Creates reference plane object
     ref_plane.dihedral_splitY=(span/2)*(span_loc/100)   #   Convert from %
-    ref_plane_geom=ref_plane.make_dihedral_ref(plane_geom,ref_plane.dihedral_splitY,wing_aerofoil)
+    ref_plane_geom=ref_plane.make_dihedral_ref(plane_geom)
 
     return tuple(ref_plane_geom), ref_plane
 
@@ -119,9 +119,13 @@ def generate_planes(ref_plane_geom:list,angle_min,angle_max,increment,span_loc,s
         plane.tipZ=Zle
         Yle=round((hspan-split_loc)*math.cos(math.radians(angle))+split_loc,3)  #   Calcualtes tip Y due to dihedral angle
         plane.tipY=Yle
-
-        tip=Section(ref_plane.Xle,Yle,Zle,mac,19,-2,aerofoil)   #   Creates tip section based off tip geometry
-        mod_str=tip.create_input()  #   Gets section string in avl format
+        
+        root=Section(ref_plane.Xle,0,0,mac,int(split_loc*0.02),-2,aerofoil)
+        split=Section(ref_plane.Xle,split_loc,0,mac,int((math.sqrt(Yle**2+Zle**2)-split_loc)*0.02),-1,aerofoil)
+        tip=Section(ref_plane.Xle,Yle,Zle,mac,0,0,aerofoil)   #   Creates tip section based off tip geometry
+        mod_str=root.create_input()  #   Gets section string in avl format
+        mod_str+=split.create_input()
+        mod_str+=tip.create_input()
 
         for index,line in enumerate(mod_geom):
             if line=="YES PLEASE\n":    #   Finds marker
@@ -152,28 +156,47 @@ def polars(planes):
     for plane in planes:
         polars=list()
         for case in plane.cases:
-            case.Cl,case.Cd=Aero.read_aero(case)
-            polars.append((case.alpha,case.Cl,case.Cd))
-        plane.polars=pd.DataFrame(polars,columns=["Alpha (deg)","Cl","Cd"])
+            case.Cl,case.Cd,case.Clb,case.Clp,case.spiral=Aero.read_aero(case)
+            polars.append((case.alpha,case.Cl,case.Cd,case.Clb,case.Clp,case.spiral))
+        plane.polars=pd.DataFrame(polars,columns=["Alpha (deg)","Cl","Cd","Clb","Clp","spiral"])
 
     pass
 
 def plot_polars(planes):
-    plt.figure(figsize=(10, 4))
-    plot1=plt.subplot(121)
-    plt.xlabel("Alpha (deg)")
-    plt.ylabel("Cl")
-    for plane in planes:
-        plane.polars.plot(ax=plot1,x="Alpha (deg)",y="Cl",label=plane.name)
-
-    plot2=plt.subplot(122)
-    plt.xlabel("Alpha (deg)")
-    plt.ylabel("Cd")
-    for plane in planes:
-        plane.polars.plot(ax=plot2,x="Alpha (deg)",y="Cd",label=plane.name)
+    fig,(ax1,ax2,ax3)=plt.subplots(ncols=3,figsize=(12,4))
     
-    plt.tight_layout
-    plt.suptitle('Polars')
+    dihedral_angles=[plane.dihedral_angle for plane in planes]
+    Cl_0=planes[0].polars['Cl'].iloc[-1]
+    Cd_0=planes[0].polars['Cd'].iloc[-1]
+    Cl_delta=[100*(plane.polars['Cl'].iloc[-1]-Cl_0)/Cl_0 for plane in planes]
+    Cd_delta=[100*(plane.polars['Cd'].iloc[-1]-Cd_0)/Cd_0 for plane in planes]
+
+    ax1.plot(dihedral_angles,Cl_delta,label="Cl_delta",color='r')
+    ax1.plot(dihedral_angles,Cd_delta,label="Cd_delta",color='b')
+    ax1.set_xlabel("Dihedral Angles (deg)")
+    ax1.set_ylabel(f"% Difference @ {planes[0].polars['Alpha (deg)'].iloc[-1]} deg")
+    ax1.legend(loc='upper left')
+    ax1.set_title("Aero Coeffients")
+
+    Clb_0=planes[0].polars['Clb'].iloc[0]
+    Clp_0=planes[0].polars['Clp'].iloc[0]
+    Clb_delta=[100*(plane.polars['Clb'].iloc[0]-Clb_0)/Clb_0 for plane in planes]
+    Clp_delta=[100*(plane.polars['Clp'].iloc[0]-Clp_0)/Clp_0 for plane in planes]
+    
+    ax2.plot(dihedral_angles,Clb_delta,label="Dihedral Effect Derivative",color='r')
+    ax2.plot(dihedral_angles,Clp_delta,label="Roll rate derivative",color='b')
+    ax2.set_xlabel("Dihedral Angles (deg)")
+    ax2.set_ylabel("% Difference")
+    ax2.legend()
+    ax2.set_title("Stability Derivatives")
+
+    spiral=[plane.polars['spiral'].iloc[0] for plane in planes]
+
+    ax3.plot(dihedral_angles,spiral,color='k')   
+    ax3.set_xlabel("Dihedral Angles (deg)")
+    ax3.set_title("Spiral Stability (>1 = stable)")
+
+    fig.tight_layout()
 
     return plt
 
@@ -184,10 +207,12 @@ def eigenvalues(planes,analysis):
                 analysis.read_eigen(plane,case)
 
     dihedral_angles=[plane.dihedral_angle for plane in planes]
-    roll_damping=[plane.eigen_modes["roll"][0] for plane in planes]
-    dutch_damping=[plane.eigen_modes["dutch"][0] for plane in planes]
+    roll_0=planes[0].eigen_modes["roll"][0]
+    dutch_0=planes[0].eigen_modes["dutch"][0]
+    roll_delta=[100*(plane.eigen_modes["roll"][0]-roll_0)/roll_0 for plane in planes]
+    dutch_delta=[100*(plane.eigen_modes["dutch"][0]-dutch_0)/dutch_0 for plane in planes]
 
-    df=pd.DataFrame(list(zip(dihedral_angles,roll_damping,dutch_damping)), columns=["Angle (deg)","Roll Damping (/s)","Dutch Damping (/s)"])
+    df=pd.DataFrame(list(zip(dihedral_angles,roll_delta,dutch_delta)), columns=["Angle (deg)","Roll Damping (/s)","Dutch Damping (/s)"])
     """
     try:
         df.to_excel("dihedral results.xlsx")
@@ -195,16 +220,17 @@ def eigenvalues(planes,analysis):
         print("! Could not write dihedral results. Close excel. !")
         pass
     """
-    plt.figure()
-    plt.title("Eigenmode Damping for Dihedral Angles")
+    plt.figure(figsize=(4,4))
+    plt.title("Eigenmode Damping")
     plt.xlabel(f"Dihedral Angle (deg)\nSplit Location={[plane.dihedral_split for plane in planes][0]}% of Span")
-    plt.ylabel("Damping (/s)")
+    plt.ylabel("Damping % Diff")
 
-    plt.plot(dihedral_angles,roll_damping,color='r',label="Roll")
-    plt.plot(dihedral_angles,dutch_damping,color='b',label="Dutch Roll")
+    plt.plot(dihedral_angles,roll_delta,color='r',label="Roll")
+    plt.plot(dihedral_angles,dutch_delta,color='b',label="Dutch Roll")
     plt.legend()
     plt.tight_layout()
     
+    """
     print(f"%diff between {dihedral_angles[0]}-{dihedral_angles[-1]}deg of dihedral:")
     print(f"Roll Damping:\t{round(100*(abs(roll_damping[0])-abs(roll_damping[-1]))/abs(roll_damping[0]),1)}")
     print(f"Dutch Damping:\t{round(100*(abs(dutch_damping[0])-abs(dutch_damping[-1]))/abs(dutch_damping[0]),1)}")
@@ -213,7 +239,7 @@ def eigenvalues(planes,analysis):
     Cl0=planes[0].polars['Cl'].iloc[-1]
     Cl1=planes[-1].polars['Cl'].iloc[-1]   
     print(f"Cl ({a1}deg):\t{round(100*((Cl1-Cl0)/Cl0),1)}")
-
+    """
     return plt
 
 def geom_plot(planes):
@@ -233,12 +259,16 @@ if __name__=='__main__':
     freeze_support()
 
     path=os.path.abspath(os.getcwd())
-    if os.path.isdir(path+"/results")==True:
-        shutil.rmtree(path+"/results")
-    if os.path.isdir(path+"/generated planes")==True:
-        shutil.rmtree(path+"/generated planes")
-    if os.path.isdir(path+"/cases")==True:
-        shutil.rmtree(path+"/cases")
+    try:
+        if os.path.isdir(path+"/results")==True:
+            shutil.rmtree(path+"/results")
+        if os.path.isdir(path+"/generated planes")==True:
+            shutil.rmtree(path+"/generated planes")
+        if os.path.isdir(path+"/cases")==True:
+            shutil.rmtree(path+"/cases")
+    except PermissionError:
+        print("! Close all results/geometry/case files !")
+        exit()
     os.mkdir(path+"/generated planes")
     os.mkdir(path+"/results")
     os.mkdir(path+"/cases")
