@@ -80,6 +80,7 @@ def run(input_file):
     if inputs["show_geom_plt"]=="Y":
         geom_plot(planes)
 
+    plt.rcParams["font.family"]="Arial"
     plt.show()
 
     pass
@@ -171,10 +172,10 @@ def plot_polars(planes):
     Cl_delta=[100*(plane.polars['Cl'].iloc[-1]-Cl_0)/Cl_0 for plane in planes]
     Cd_delta=[100*(plane.polars['Cd'].iloc[-1]-Cd_0)/Cd_0 for plane in planes]
 
-    ax1.plot(dihedral_angles,Cl_delta,label="Cl_delta",color='r')
-    ax1.plot(dihedral_angles,Cd_delta,label="Cd_delta",color='b')
-    ax1.set_xlabel("Dihedral Angles (deg)")
-    ax1.set_ylabel(f"% Difference @ {planes[0].polars['Alpha (deg)'].iloc[-1]} deg")
+    ax1.plot(dihedral_angles,Cl_delta,label="\u0394Cl",color='r')
+    ax1.plot(dihedral_angles,Cd_delta,label="\u0394Cd",color='b')
+    ax1.set_xlabel("Dihedral Angles (\u00B0)")
+    ax1.set_ylabel(f"\u0394 (%) @ {planes[0].polars['Alpha (deg)'].iloc[-1]}\u00B0")
     ax1.legend(loc='upper left')
     ax1.set_title("Aero Coeffients")
 
@@ -185,15 +186,15 @@ def plot_polars(planes):
     
     ax2.plot(dihedral_angles,Clb_delta,label="Dihedral Effect Derivative",color='r')
     ax2.plot(dihedral_angles,Clp_delta,label="Roll rate derivative",color='b')
-    ax2.set_xlabel("Dihedral Angles (deg)")
-    ax2.set_ylabel("% Difference")
+    ax2.set_xlabel("Dihedral Angles (\u00B0)")
+    ax2.set_ylabel("\u0394 (%)")
     ax2.legend()
     ax2.set_title("Stability Derivatives")
 
     spiral=[plane.polars['spiral'].iloc[0] for plane in planes]
 
     ax3.plot(dihedral_angles,spiral,color='k')   
-    ax3.set_xlabel("Dihedral Angles (deg)")
+    ax3.set_xlabel("Dihedral Angles (\u00B0)")
     ax3.set_title("Spiral Stability (>1 = stable)")
 
     fig.tight_layout()
@@ -222,8 +223,8 @@ def eigenvalues(planes,analysis):
     """
     plt.figure(figsize=(4,4))
     plt.title("Eigenmode Damping")
-    plt.xlabel(f"Dihedral Angle (deg)\nSplit Location={[plane.dihedral_split for plane in planes][0]}% of Span")
-    plt.ylabel("Damping % Diff")
+    plt.xlabel(f"Dihedral Angle (\u00B0)\nSplit Location={[plane.dihedral_split for plane in planes][0]}% of Span")
+    plt.ylabel("\u0394 Damping (%)")
 
     plt.plot(dihedral_angles,roll_delta,color='r',label="Roll")
     plt.plot(dihedral_angles,dutch_delta,color='b',label="Dutch Roll")
