@@ -11,7 +11,7 @@ Wraps avl. Code is highly scuffed. You have been warned.
 - Calculates roll and dutch roll damping modes for each configuration.
 - Runs aero analysis, generating Cl and Cd polars, and relevant stability derivatives.
 
-- AVL solution becomes very unstable as dihedral span location -> 0
+- AVL solution becomes very unstable as dihedral span location approaches tail sections in y.
 
 #### aero.py useage:
 (very scuffed)
