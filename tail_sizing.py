@@ -1,316 +1,250 @@
-import subprocess as sp
-
-from matplotlib.colors import same_color
-from geometry import Plane,Section
-import math
-import numpy
 import os
 import shutil
+import numpy as np
+from matplotlib import pyplot as plt
 from concurrent.futures import ThreadPoolExecutor
-import matplotlib.pyplot as plt
 from tqdm import tqdm
+import copy
 
-########################    INPUT & RUN    ##############################
+from geometry import Plane,Section
+from avl import Case,avl_cmd
 
-### Loads inputs... 
-def load_inputs(input_file):
-    with open(input_file,'r') as file:
-        lines=[line for line in file.readlines()]
-    
-    inputs={"input_plane":lines[1].split(": ")[1:][0].strip(),
-            "wing_aerofoil":lines[3].split(": ")[1:][0],
-            "elevator_aerofoil":lines[4].split(": ")[1:][0],
-            "fin_aerofoil":lines[5].split(": ")[1:][0],
-            "Xcg":lines[8].split()[1],
-            "Ycg":lines[9].split()[1],
-            "Zcg":lines[10].split()[1],
-            "mass":float(lines[11].split()[1]),
-            "Lt_upper":float(lines[14].split()[1]),
-            "Lt_lower":float(lines[15].split()[1]),
-            "St_h_upper":float(lines[16].split()[1]),
-            "St_h_lower":float(lines[17].split()[1]),
-            "b_th":lines[18].split()[1],
-            "St_v":float(lines[19].split()[1]),
-            "steps":int(lines[20].split()[1]),
-            "sm_ideal":float(lines[22].split()[1]),
-            "tolerance":float(lines[23].split()[1]),
-            "config":float(lines[25].split()[1]),
-            "threads":int(lines[27].split()[1]),
-            "calc_cg":False
-            }
+class AutoTail():
+    def __init__(self,config_file:str): 
+        path=os.path.abspath(os.getcwd())
+        if os.path.isdir(path+"/results")==True:
+            shutil.rmtree(path+"/results")
+        if os.path.isdir(path+"/generated planes")==True:
+            shutil.rmtree(path+"/generated planes")
+        if os.path.isdir(path+"/cases")==True:
+            shutil.rmtree(path+"/cases")
+        os.mkdir(path+"/generated planes")
+        os.mkdir(path+"/results")
+        os.mkdir(path+"/cases")
 
-    if inputs["b_th"]!="-":
-        inputs["b_th"]=float(inputs["b_th"])
+        self.read_config(config_file)
 
-    if inputs["Lt_lower"]==0 or inputs["St_h_lower"]==0:
-        print("Input non-zero lower bound.")
-        exit()
-    
-    if inputs["Xcg"]=="-" and inputs["Ycg"]=="-" and inputs["Zcg"]=="-":
-        inputs["calc_cg"]=True
-    else:
-        inputs["Xcg"]=float(inputs["Xcg"])
-        inputs["Ycg"]=float(inputs["Ycg"])
-        inputs["Zcg"]=float(inputs["Zcg"])
+        self.ref_plane=Plane(name="REF")
+        self.ref_plane.read(self.plane_file)
+        self.ref_plane.strip_section("Elevator")
+        self.ref_plane.strip_surface("Fin")
 
-    return inputs
+        self.planes=self.generate_planes()
 
-### Main run function.
-def run(input_file):
-    inputs=load_inputs(input_file)
-    
-    #   Generate planes
-    mac,plane_geom, ARt=load_plane(inputs["input_plane"])    #   Loads input plane
-    ref_plane=make_ref_plane(plane_geom,inputs["config"])    #   Strips input plane of elevator sections
-    planes=generate_planes(ref_plane,inputs["St_h_lower"],
-                            inputs["St_h_upper"],
-                            inputs["Lt_lower"],
-                            inputs["Lt_upper"],
-                            inputs["steps"],ARt,mac,
-                            inputs["elevator_aerofoil"],
-                            inputs["Xcg"],
-                            inputs["St_v"],
-                            inputs["config"],
-                            inputs["calc_cg"],
-                            inputs["sm_ideal"],
-                            inputs["b_th"]
-                            )
-    
-    #   Run analysis   
-    case=case_create(inputs["Xcg"],inputs["Ycg"],inputs["Zcg"],inputs["mass"])  #   Generates case file
+        self.case=Case(self.Xcg,self.Ycg,self.Zcg,self.mass)
+        self.case.write_stab_case()
 
-    print("\nStability analysis...")
-    tasks=[(case,plane) for plane in planes]    #   Generator for running all plane configs
-    with ThreadPoolExecutor(max_workers=inputs["threads"]) as pool: #   Starts analysis on multiple threads
-        list(tqdm(pool.map(run_analysis,tasks),total=len(tasks)))
+        return None
 
-    tasks=[plane for plane in planes]
-    with ThreadPoolExecutor(max_workers=inputs["threads"]) as pool: #   Starts post processing on multiple threads
-        pool.map(calc_SM,tasks)
+    def read_config(self,file):
+        with open(file,'r') as f:
+            lines=[line for line in f.readlines()]
+        lines=[line for line in lines if line[0]!="#" and line!="\n"]
 
-    #   Plot SM against St,Lt & outputs possibel configurations.
-    results(planes,inputs["tolerance"],inputs["calc_cg"])
+        self.plane_file         = lines[0].split(": ")[1:][0].strip()
+        self.wing_aerofoil      = lines[1].split(": ")[1:][0]
+        self.elevator_aerofoil  = lines[2].split(": ")[1:][0]
+        self.fin_aerofoil       = lines[3].split(": ")[1:][0]
 
-########################    GEOMETRY    ##############################
+        self.Xcg                = lines[4].split()[1]
+        self.Ycg                = lines[5].split()[1]
+        self.Zcg                = lines[6].split()[1]
+        self.mass               = float(lines[7].split()[1])
 
-### Reads input plane file for modification later
-def load_plane(plane_file:str):
-    """
-    Loads input plane file & saves reference dims.
-    """
-    plane_geom=list()
-    with open(plane_file,'r') as file:
-        for line in file.readlines():
-            if line=="\n" or line[0]=="#":  #   Ignores blank lines & comments
-                continue
-            else:
-                plane_geom.append(line)
-    ref_dims=[n for n in plane_geom][3]
-    mac=float(ref_dims.split()[1])
-    span=float(ref_dims.split()[2])
-    ARw=span/mac
-    ARt=ARw*2/3
+        self.Lt_upper           = float(lines[8].split()[1])
+        self.Lt_lower           = float(lines[9].split()[1])
+        self.St_h_upper         = float(lines[10].split()[1])
+        self.St_h_lower         = float(lines[11].split()[1])
+        self.b_th               = lines[12].split()[1]
+        self.St_v               = float(lines[13].split()[1])
+        self.steps              = int(lines[14].split()[1])
 
-    return mac, plane_geom, ARt
-
-### Creates reference plane str exlucing elevator
-def make_ref_plane(plane_geom:list,tail_config:str)->tuple:
-    """
-    Removes tail sections from input plane for modification
-    """
-    ref_plane=Plane("reference")
-    ref_plane.tail_config=tail_config
-    ref_plane_geom=ref_plane.make_reference(plane_geom)
-
-    return tuple(ref_plane_geom)
-
-### Creates modified plane object
-def generate_planes(ref_plane:list,St_h_lower,St_h_upper,Lt_lower,Lt_upper,steps,ARt,mac,aerofoil,Xcg,St_v,config,calc_cg,sm_ideal,b_th)->object:
-    planes=list()
-    count=0
-    a=0
-    for St_h in numpy.linspace(St_h_lower,St_h_upper,steps):
-        for Lt in numpy.linspace(Lt_lower,Lt_upper,steps):
-            St_h=round(float(St_h),2)
-            Lt=round(Lt,2)
-
-            name=str(count)+"-"+str(St_h)+"St_h-"+str(Lt)+"Lt"  #   Creates plane name
-            plane=Plane(name)   #   Initializes new plane
-            plane.Lt=round(Lt,0)
-            plane.St_h=St_h
-            plane.mac=mac
-            plane.sm_ideal=sm_ideal
-            if calc_cg==False:
-                plane.Xcg=Xcg
-            plane.tail_config=config
-
-            mod_geom=list(ref_plane)
-            if b_th!="-":   #   if span constraint used:
-                chord=round((St_h*1000**2)/b_th,3)    #   Calculate chord based off span & area, not area & AR
-                span=b_th
-            else:
-                chord=round(math.sqrt(St_h/ARt)*1000,3)     #   Calculates h chord based on area & AR
-                span=round(math.sqrt(St_h*ARt)*1000,3)      #   Calculates HTP span (mm)
-            try:
-                Zle=round((St_v*(1000**2))/(2*chord),3)         #   Calculates tip height (inverted v tail) (mm)
-            except:
-                exit()
-
-            plane.b_th=round(span,0)
-            plane.b_tv=round(Zle,0)
-            plane.c_t=round(chord,0)
-
-            if config==0 and b_th=="-":                
-                root=Section(Lt,0,0,chord,10,-1,aerofoil)    #   Defines root section (object)
-            elif config==1:          
-                root=Section(Lt,0,Zle,chord,10,-1,aerofoil)
-            else:
-                print("\nInvalid configuration selected.")
-                exit()
-
-            tip=Section(Lt,span/2,0,chord,10,-2,aerofoil)    #   Defines tip section (object)
-            mod_str=root.create_input()+tip.create_input()  #   Combines 2 sections to insert into reference plane
-
-            for index,line in enumerate(mod_geom):
-                if line=="YES PLEASE\n":
-                    mod_geom.pop(index)    #   Removes marker
-                    mod_geom.insert(index,mod_str) #   Inserts modified sections
-
-            plane.geom_file="generated planes/"+plane.name+".avl"
-            with open(plane.geom_file,'w') as file:
-                file.write("".join(mod_geom))
-            count+=1
-
-            planes.append(plane)
-
-    print("Planes generated...")
-    return(planes)
-
-########################    ANALYSIS    ##############################
-
-### Opens AVL
-def AVL():
-    """
-    Initiates AVL.exe in subprocess.
-    """
-    return sp.Popen(['avl.exe'],
-                stdin=sp.PIPE,
-                stdout=sp.PIPE,
-                stderr=sp.PIPE)
-
-### Write command to AVL
-def issueCmd(cmd: str):
-    AVL().communicate(input=cmd.encode())
-
-### Creates case file according to AVL format.
-def case_create(Xcg,Ycg,Zcg,mass)->str:
-    """
-    Creates case string & writes to file
-    """
-    case_str="\n---------------------------------------------\n"
-    case_str+="Run case  1:\n\n"
-    case_str+="X_cg={0} Lunit\n".format(Xcg)
-    case_str+="Y_cg={0} Lunit\n".format(Ycg)
-    case_str+="Z_cg={0} Lunit\n".format(Zcg)
-    case_str+="mass={0} kg\n".format(mass)
-
-    path="cases/tail_case.txt"
-    with open(path,'w') as file:    #   Saves case file
-        file.write(case_str)
-    return path 
-    
-### Runs analysis through AVL interface options & saves stability derivatives.
-def run_analysis(tasks)->str:
-    """
-    Writes commands string to AVL
-    """
-    case,plane=tasks
-
-    run="load {0}\n".format(plane.geom_file)    #   Load plane
-    run+="case {0}\n".format(case)  #   Load case
-    run+="oper\n x\n"   #   Run analysis
-    run+="st\n" #   View stability derivatives
-    
-    plane.results_file="results/"+plane.name+".txt"
-    run+=plane.results_file+"\n"    #   Saves results
-    
-    issueCmd(run)
-
-########################    POST PROCESSING    ##############################
-
-### Finds neutral point in results file & calculates SM.
-def calc_SM(tasks):
-    plane=tasks
-
-    plane.calc_SM() #   Calculates static margin
-
-def results(planes,tolerance,calc_cg):
-    """
-    Plots results
-    """
-    fig=plt.figure()
-    ax=fig.add_subplot(projection='3d')
-
-    x=[plane.St_h for plane in planes]
-    y=[plane.Lt for plane in planes]
-
-    if planes[0].tail_config==1:
-            zz="z (mm):"
-    else:
-        zz=""
-
-    if calc_cg==False:
-        z=[plane.sm for plane in planes]
-
-        ax.scatter(x,y,z,c=z)
-        ax.set_xlabel("St_h (m^2)")
-        ax.set_ylabel("Lt (m)")
-        ax.set_zlabel("SM")
- 
-        solutions=[f"\nPossible configurations:\nPlane ID:\tSM:\tnp\tLt (mm):\tb (mm):\tc (mm):\t{zz}\n"]
-        for plane in planes:
-            if math.isclose(plane.sm,plane.sm_ideal,rel_tol=tolerance)==True:
-                solutions.append(plane.name.split("-")[0])
-                solutions.append(f"\t\t{str(plane.sm)}\t{str(plane.np)}\t{str(plane.Lt)}\t\t{str(plane.b_th)}\t{str(plane.c_t)}\t{str(plane.b_tv if zz!='' else '')}\n")
+        self.sm_ideal           = float(lines[15].split()[1])
+        self.tolerance          = float(lines[16].split()[1])
+        self.config             = float(lines[17].split()[1])
+        self.threads            = int(lines[18].split()[1])
         
-        if len(solutions)==1:
-            print("\nNo ideal configurations possible. Consider changing limits.")
+        if self.b_th!="-":
+            self.b_th=float(self.b_th)
+
+        if self.Lt_lower==0 or self.St_h_lower==0:
+            print("Input non-zero lower bound.")
+            exit()
+        
+        if self.Xcg=="-" and self.Ycg=="-" and self.Zcg=="-":
+            self.calc_cg=True
         else:
-            solutions.append("\nConsider refining limits around possible configurations.\n")
+            self.calc_cg=False
+
+            self.Xcg=float(self.Xcg)
+            self.Ycg=float(self.Ycg)
+            self.Zcg=float(self.Zcg)
+
+        return None
+
+    def generate_planes(self):
+        planes=[]
+
+        St_h_range=np.linspace(self.St_h_lower,self.St_h_upper,self.steps)
+        Lt_range=np.linspace(self.Lt_lower,self.Lt_upper,self.steps)
+
+        mac=self.ref_plane.mac
+        span=self.ref_plane.span
+        ARw=self.ref_plane.ARw
+        ARt=ARw*2/3
+
+        count=0
+        for St_h in St_h_range:
+            for Lt in Lt_range:
+                St_h=round(float(St_h),2)
+                Lt=round(Lt,2)
+
+                name=str(count)+"-"+str(St_h)+"St_h-"+str(Lt)+"Lt"  #   Creates plane name
+                plane=Plane(name)   #   Initializes new plane
+                
+                plane.Lt=round(Lt,0)
+                plane.St_h=St_h
+                plane.mac=mac
+                plane.sm_ideal=self.sm_ideal
+
+                if self.calc_cg==False:
+                    plane.Xcg=self.Xcg
+                plane.tail_config=self.config
+
+                mod_geom=copy.copy(self.ref_plane.file_str)
+
+                if self.b_th!="-":   #   if span constraint used:
+                    chord=round((St_h*1000**2)/self.b_th,3)    #   Calculate chord based off span & area, not area & AR
+                    span=self.b_th
+                else:
+                    chord=round(np.sqrt(St_h/ARt)*1000,3)     #   Calculates h chord based on area & AR
+                    span=round(np.sqrt(St_h*ARt)*1000,3)      #   Calculates HTP span (mm)
+                try:
+                    Zle=round((self.St_v*(1000**2))/(2*chord),3)         #   Calculates tip height (inverted v tail) (mm)
+                except:
+                    exit()
+
+                plane.b_th=round(span,0)
+                plane.b_tv=round(Zle,0)
+                plane.c_t=round(chord,0)
+
+                if self.config==0 and self.b_th=="-":                
+                    root=Section(Lt,0,0,chord,10,-1,self.elevator_aerofoil)    #   Defines root section (object)
+                elif self.config==1:          
+                    root=Section(Lt,0,Zle,chord,10,-1,self.elevator_aerofoil)
+                else:
+                    print("\nInvalid self.configuration selected.")
+                    exit()
+
+                tip=Section(Lt,span/2,0,chord,10,-2,self.elevator_aerofoil)    #   Defines tip section (object)
+                mod_str=root.string()+tip.string()  #   Combines 2 sections to insert into reference plane
+
+                for index,line in enumerate(mod_geom):
+                    if line=="MARKER\n":
+                        mod_geom.pop(index)    #   Removes marker
+                        mod_geom.insert(index,mod_str) #   Inserts modified sections
+
+                plane.geom_file="generated planes/"+plane.name+".avl"
+                with open(plane.geom_file,'w') as file:
+                    file.write("".join(mod_geom))
+                count+=1
+
+                planes.append(plane)
+
+        print("Planes generated...")
+
+        return(planes)
+
+    def run(self):
+        print("\nStability analysis...")
+        tasks=[(self.case,plane) for plane in self.planes]
+        with ThreadPoolExecutor(max_workers=self.threads) as pool: #   Starts analysis on multiple threads
+            list(tqdm(pool.map(self.stab_analysis,tasks),total=len(tasks)))
+
+        tasks=[plane for plane in self.planes]
+        with ThreadPoolExecutor(max_workers=self.threads) as pool: #   Starts post processing on multiple threads
+            pool.map(self.calc_SM,tasks)
+
+    def stab_analysis(self,tasks):
+        case,plane=tasks
+
+        cmd_str="load {0}\n".format(plane.geom_file)    #   Load plane
+        cmd_str+="case {0}\n".format(case)  #   Load case
+        cmd_str+="oper\n x\n"   #   Run analysis
+        cmd_str+="st\n" #   View stability derivatives
+        
+        plane.results_file="results/"+plane.name+".txt"
+        cmd_str+=plane.results_file+"\n"    #   Saves results
+        
+        avl_cmd(cmd_str)
+
+        return None
+
+    def calc_SM(self,tasks):
+        plane=tasks
+        if self.calc_cg==False:
+            plane.calc_SM()
+        else:
+            plane.calc_Xcg_ideal()
+
+        return None
+
+    def results(self):
+        """
+        Plots results
+        """
+        fig=plt.figure()
+        ax=fig.add_subplot(projection='3d')
+
+        x=[plane.St_h for plane in self.planes]
+        y=[plane.Lt for plane in self.planes]
+
+        if self.planes[0].tail_config==1:
+                zz="z (mm):"
+        else:
+            zz=""
+
+        if self.calc_cg==False:
+            z=[plane.sm for plane in self.planes]
+
+            ax.scatter(x,y,z,c=z)
+            ax.set_xlabel("St_h (m^2)")
+            ax.set_ylabel("Lt (m)")
+            ax.set_zlabel("SM")
+    
+            solutions=[f"\nPossible configurations:\nPlane ID:\tSM:\tnp\tLt (mm):\tb (mm):\tc (mm):\t{zz}\n"]
+            for plane in self.planes:
+                print(plane.sm,plane.sm_ideal)
+                if np.isclose(plane.sm,plane.sm_ideal,rtol=self.tolerance)==True:
+                    solutions.append(plane.name.split("-")[0])
+                    solutions.append(f"\t\t{str(plane.sm)}\t{str(plane.np)}\t{str(plane.Lt)}\t\t{str(plane.b_th)}\t{str(plane.c_t)}\t{str(plane.b_tv if zz!='' else '')}\n")
+            
+            if len(solutions)==1:
+                print("\nNo ideal configurations possible. Consider changing limits.")
+            else:
+                solutions.append("\nConsider refining limits around possible configurations.\n")
+                print("".join(solutions))
+
+        else:
+            z=[plane.np for plane in self.planes]
+
+            ax.scatter(x,y,z,c=z)
+            ax.set_xlabel("St_h (m^2)")
+            ax.set_ylabel("Lt (m)")
+            ax.set_zlabel(f"Xcg for SM={self.planes[0].sm_ideal}")
+
+            solutions=["\nPossible configurations:\nPlane ID:\tXcg:\tnp (mm)\tLt (mm):\tb (mm):\tc (mm):\t{zz}\n"]
+            for plane in self.planes:
+                solutions.append(plane.name.split("-")[0])
+                solutions.append(f"\t\t{str(plane.Xcg)}\t{str(plane.np)}\t{str(plane.Lt)}\t\t{str(plane.b_th)}\t{str(plane.c_t)}\t{str(plane.b_tv if zz!='' else '')}\n")
+
             print("".join(solutions))
 
-    elif calc_cg==True:
-        z=[plane.np for plane in planes]
+        plt.show()
 
-        ax.scatter(x,y,z,c=z)
-        ax.set_xlabel("St_h (m^2)")
-        ax.set_ylabel("Lt (m)")
-        ax.set_zlabel(f"Xcg for SM={planes[0].sm_ideal}")
-
-        solutions=["\nPossible configurations:\nPlane ID:\tXcg:\tnp (mm)\tLt (mm):\tb (mm):\tc (mm):\t{zz}\n"]
-        for plane in planes:
-            solutions.append(plane.name.split("-")[0])
-            solutions.append(f"\t\t{str(plane.Xcg)}\t{str(plane.np)}\t{str(plane.Lt)}\t\t{str(plane.b_th)}\t{str(plane.c_t)}\t{str(plane.b_tv if zz!='' else '')}\n")
-
-        print("".join(solutions))
-
-    plt.show()
-    pass
-
+        return None
 
 if __name__=="__main__":
-    os.system('cls')
-    input_file="TAIL_CONFIG.txt"
-
-    path=os.path.abspath(os.getcwd())
-    if os.path.isdir(path+"/results")==True:
-        shutil.rmtree(path+"/results")
-    if os.path.isdir(path+"/generated planes")==True:
-        shutil.rmtree(path+"/generated planes")
-    if os.path.isdir(path+"/cases")==True:
-        shutil.rmtree(path+"/cases")
-    os.mkdir(path+"/generated planes")
-    os.mkdir(path+"/results")
-    os.mkdir(path+"/cases")
-
-    run(input_file)
+    auto=AutoTail("tail.config")
+    auto.run()
+    auto.results()
