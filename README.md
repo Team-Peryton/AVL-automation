@@ -1,5 +1,5 @@
 # AVL-Wrapper
-Wraps avl. Code is highly scuffed. You have been warned.
+CODE CLEANUP IN PROGRESS
 
 #### Tail Sizing
 - Suggests tail configurations based on input geometry to achieve a desired static margin.
@@ -14,17 +14,7 @@ Wraps avl. Code is highly scuffed. You have been warned.
 - AVL solution becomes very unstable as dihedral span location approaches tail sections in y.
 
 #### aero.py useage:
-(very scuffed)
-```
-analysis=Aero("AERO_CONFIG.txt")
-cases=analysis.initialize_cases()
-#generate plane objects (geometry.py)
-for plane in planes:
-  plane.cases=cases
-  for case in plane.cases:
-    analysis.analysis(plane,plane.case)
-analysis.read_aero(case)
-```
+example useage to come
 
 #### Required files in same directory:
 - avl.exe
