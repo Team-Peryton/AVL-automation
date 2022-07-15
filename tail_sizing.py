@@ -24,16 +24,6 @@ class AutoTail():
 
         self.read_config(config_file)
 
-        self.ref_plane=Plane(name="REF")
-        self.ref_plane.read(self.plane_file)
-        self.ref_plane.strip_section("Elevator")
-        self.ref_plane.strip_surface("Fin")
-
-        self.planes=self.generate_planes()
-
-        self.case=Case(self.Xcg,self.Ycg,self.Zcg,self.mass)
-        self.case.write_stab_case()
-
         return None
 
     def read_config(self,file):
@@ -83,6 +73,11 @@ class AutoTail():
         return None
 
     def generate_planes(self):
+        self.ref_plane=Plane(name="REF")
+        self.ref_plane.read(self.plane_file)
+        self.ref_plane.strip_section("Elevator")
+        self.ref_plane.strip_surface("Fin")
+
         planes=[]
 
         St_h_range=np.linspace(self.St_h_lower,self.St_h_upper,self.steps)
@@ -99,7 +94,7 @@ class AutoTail():
                 St_h=round(float(St_h),2)
                 Lt=round(Lt,2)
 
-                name=str(count)+"-"+str(St_h)+"St_h-"+str(Lt)+"Lt"  #   Creates plane name
+                name=str(count)  #   Creates plane name
                 plane=Plane(name)   #   Initializes new plane
                 
                 plane.Lt=round(Lt,0)
@@ -144,7 +139,9 @@ class AutoTail():
                         mod_geom.pop(index)    #   Removes marker
                         mod_geom.insert(index,mod_str) #   Inserts modified sections
 
-                plane.geom_file="generated planes/"+plane.name+".avl"
+                file_name=f"{plane.name}-{str(St_h)}{St_h}-{str(Lt)}Lt"
+                plane.geom_file=f"generated planes/{file_name}.avl"
+                
                 with open(plane.geom_file,'w') as file:
                     file.write("".join(mod_geom))
                 count+=1
@@ -152,10 +149,14 @@ class AutoTail():
                 planes.append(plane)
 
         print("Planes generated...")
+        self.planes=planes
 
         return(planes)
 
     def run(self):
+        self.case=Case(self.Xcg,self.Ycg,self.Zcg,self.mass)
+        self.case.write_stab_case()
+
         print("\nStability analysis...")
         tasks=[(self.case,plane) for plane in self.planes]
         with ThreadPoolExecutor(max_workers=self.threads) as pool: #   Starts analysis on multiple threads
@@ -214,7 +215,6 @@ class AutoTail():
     
             solutions=[f"\nPossible configurations:\nPlane ID:\tSM:\tnp\tLt (mm):\tb (mm):\tc (mm):\t{zz}\n"]
             for plane in self.planes:
-                print(plane.sm,plane.sm_ideal)
                 if np.isclose(plane.sm,plane.sm_ideal,rtol=self.tolerance)==True:
                     solutions.append(plane.name.split("-")[0])
                     solutions.append(f"\t\t{str(plane.sm)}\t{str(plane.np)}\t{str(plane.Lt)}\t\t{str(plane.b_th)}\t{str(plane.c_t)}\t{str(plane.b_tv if zz!='' else '')}\n")
@@ -244,7 +244,16 @@ class AutoTail():
 
         return None
 
+    def plot_plane(self,id):
+        """
+        Plots plane geometry with dimensions.
+        """
+        
+
+        return None
+
 if __name__=="__main__":
-    auto=AutoTail("tail.config")
-    auto.run()
-    auto.results()
+    tail=AutoTail("tail.config")
+    tail.generate_planes()
+    tail.run()
+    tail.results()

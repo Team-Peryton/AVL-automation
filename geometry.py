@@ -1,59 +1,37 @@
 class Plane():
-    def __init__(self,
-                name:str,
-                geom_file:str=None,
-                results_file:str=None,
-                Xcg:float=None,
-                np:float=None,
-                sm:float=None,
-                sm_ideal:float=None,
-                Lt:float=None,
-                St_h:float=None,
-                St_v:float=None,
-                mac:float=None,
-                ARt:float=None,
-                span:float=None,
-                dihedral_angle:float=None,
-                dihedral_split:float=None,
-                dihedral_splitY:float=None,
-                tipY:float=None,
-                tipZ:float=None,
-                Xle:float=None,
-                cases:list=None,
-                polars=None,
-                eigen_modes=None,
-                tail_config=None,
-                b_th=None,
-                b_tv=None,
-                c_t=None
-                ):
+    def __init__(self,name:str,geom_file=None):
 
         self.name=name
         self.geom_file=geom_file
-        self.results_file=results_file
-        self.Xcg=Xcg
-        self.np=np
-        self.sm=sm
-        self.sm_ideal=sm_ideal
-        self.Lt=Lt
-        self.St_h=St_h  #   Equivilent horizontal tail area
-        self.St_v=St_v  #   Equivilent vertical tail area
-        self.mac=mac
-        self.ARt=ARt
-        self.span=span
-        self.dihedral_angle=dihedral_angle
-        self.dihedral_split=dihedral_split
-        self.dihedral_splitY=dihedral_splitY
-        self.tipY=tipY
-        self.tipZ=tipZ
-        self.Xle=Xle
-        self.cases=cases
-        self.polars=polars
-        self.eigen_modes=eigen_modes
-        self.tail_config=tail_config
-        self.b_th=b_th
-        self.b_tv=b_tv
-        self.c_t=c_t
+        self.results_file=None
+        self.Xcg=None
+        self.np=None
+        self.sm=None
+        self.sm_ideal=None
+        self.Lt=None
+        self.St_h=None  #   Equivilent horizontal tail area
+        self.St_v=None  #   Equivilent vertical tail area
+        self.mac=None
+        self.ARt=None
+        self.span=None
+        self.dihedral_angle=None
+        self.dihedral_split=None
+        self.dihedral_splitY=None
+        self.tipY=None
+        self.tipZ=None
+        self.Xle=None
+        self.cases=None
+        self.polars=None
+        self.modes=None
+        self.tail_config=None
+        self.b_th=None
+        self.b_tv=None
+        self.c_t=None
+
+        if geom_file!=None:
+            self.read(geom_file)
+
+        return None
 
     def read(self,file:str):
         """
@@ -68,12 +46,25 @@ class Plane():
         file_str: list; A list of lines in the plane file.
         """
         file_str=list()
-        with open(file,'r') as file:
-            for line in file.readlines():
-                if line=="\n" or line[0]=="#":  #   Ignores blank lines & comments
-                    continue
-                else:
-                    file_str.append(line)
+        with open(file,'r') as f:
+            lines=f.readlines()
+
+        wing=False
+
+        for i,line in enumerate(lines):
+            if line=="\n" or line[0]=="#":  #   Ignores blank lines & comments
+                continue
+            else:
+                file_str.append(line)
+
+            if line.strip()=="Main Wing":
+                wing=True
+            if line.split()[0]=="SECTION" and wing==True:
+                Xle=lines[i+1].split()[0]
+                wing=False
+
+        self.Xle=Xle
+
         ref_dims=[n for n in file_str][3]
         self.mac=float(ref_dims.split()[1])
         self.span=float(ref_dims.split()[2])
@@ -101,7 +92,7 @@ class Plane():
         section=False
         found=False
         for line in self.file_str:
-            if line.split()[0]==section_name:
+            if line.strip()==section_name:
                 found=True
                 surface=True
             if line.split()[0]=="SECTION" and surface==True:
@@ -230,3 +221,6 @@ class Section():
         section_str+=f"AFIL 0.0.1.0\n{self.aerofoil}\n"
 
         return section_str
+
+if __name__=="__main__":
+    plane=Plane('aria3','Aria3.avl')
