@@ -8,7 +8,7 @@ import copy
 import pandas as pd
 
 from geometry import Plane,Section
-from avl import Case,avl_cmd
+from aero import Case,avl_cmd
 
 class AutoTail():
     def __init__(self,config_file:str): 
@@ -32,6 +32,12 @@ class AutoTail():
             lines=[line for line in f.readlines()]
         lines=[line for line in lines if line[0]!="#" and line!="\n"]
 
+        
+        if lines[0].strip()!="TAIL CONFIG":
+            print(f"\u001b[31m[Error]\u001b[0m Wrong config file type ({file}).")
+            exit()
+        lines=lines[1:]
+        
         self.plane_file         = lines[0].split(": ")[1:][0].strip()
         self.wing_aerofoil      = lines[1].split(": ")[1:][0]
         self.elevator_aerofoil  = lines[2].split(": ")[1:][0]
@@ -96,7 +102,7 @@ class AutoTail():
                 Lt=round(Lt,2)
 
                 name=str(count)  #   Creates plane name
-                plane=Plane(name)   #   Initializes new plane
+                plane=Plane(name=name)   #   Initializes new plane
                 
                 plane.Lt=round(Lt,0)
                 plane.St_h=St_h
@@ -147,7 +153,7 @@ class AutoTail():
 
                 planes.append(plane)
 
-        print("Planes generated...")
+        print("Planes generated.")
         self.planes=planes
 
         return planes
@@ -156,10 +162,9 @@ class AutoTail():
         self.case=Case(self.Xcg,self.Ycg,self.Zcg,self.mass)
         self.case.write_stab_case()
 
-        print("\nStability analysis...")
         tasks=[(self.case,plane) for plane in self.planes]
         with ThreadPoolExecutor(max_workers=self.threads) as pool: #   Starts analysis on multiple threads
-            list(tqdm(pool.map(self.stab_analysis,tasks),total=len(tasks)))
+            list(tqdm(pool.map(self.stab_analysis,tasks),total=len(tasks),desc="Stability analysis"))
 
         tasks=[plane for plane in self.planes]
         with ThreadPoolExecutor(max_workers=self.threads) as pool: #   Starts post processing on multiple threads
