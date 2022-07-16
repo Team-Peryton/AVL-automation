@@ -9,6 +9,8 @@ A lose wrapping of the vortex lattice method [AVL](https://web.mit.edu/drela/Pub
    >pip install -r requirements.txt
 3. Run avl-automation.py from the command line. For help:
    >py avl-automation.py -h
+   
+If you get a seemingly random error it's likely because your input .avl plane file is formatted incorrectly. Submit an issue containing the .avl file and your config file(s) and I'll either fix the code or tell you how to fix your inputs :)
 
 ## Tail Sizing
 - Suggests tail configurations based on input geometry to achieve a desired static margin.
