@@ -1,7 +1,7 @@
 # AVL-automation
-Surrey Team Peryton Heron IMechE UAS 2022 AVL automation program. Enabled automatic tail sizing based on input aircraft geometry, and investigation of dihedral angle effects on stability and aerodynamic performance. 
+Surrey Team Peryton Heron IMechE UAS 2022 AVL automation program. Enables automatic tail sizing based on input aircraft geometry, and investigation of dihedral angle effects on stability and aerodynamic performance. 
 
-A lose wrapping of the vortex lattice method AVL provides a means of scripting these tools.
+A lose wrapping of the vortex lattice method [AVL](https://web.mit.edu/drela/Public/web/avl/) provides a means of scripting these tools.
 
 ## Usage
 1. Install python (tested on 3.9.5)
@@ -16,11 +16,22 @@ A lose wrapping of the vortex lattice method AVL provides a means of scripting t
 - Can be run in reverse i.e. input tail dimensions & output optimal CG location
 - Anslysis considers only the horizontal tail plane (if convensional tail is selected). Vertical tail plane should be sized independently based on rudder and yaw stability requirements.
 
-The main 3 variables to consider when sizing the horizontal tail for longitudinal static stability are: tail moment arm, tail plane area, and CG position. In short, increasing the moment arm and area increase the longitudinal stability of the aircraft for a given CG because it moves the neutral point away from the CG. The neutral point is the point where, if the CG was placed on it, $C_M/\alpha=0$. 
+The program will generate tail configurations between limits given in the .config file and use AVL to calculate the neutral point of each. It then gives you a nice graph like the one below and prints possible tail configurations.
 
-![image](https://user-images.githubusercontent.com/79290428/179371498-1d221bb6-5d38-473b-85c3-066d611ca7e1.png)
+![image](https://user-images.githubusercontent.com/79290428/179372168-712e726d-9805-4b63-bebe-51a15cef5054.png)
 
-Fig. 1 - $C_M/\alpha$ curves for stable and instable aircraft.
+**Fig. 1 - Static margins for tail areas and moment arms of tail configurations assessed**
+```
+Plane ID  Static Margin  Xnp (mm)  Xt (mm)  Span (mm)  Chord (mm)
+     80           0.30     493.1   1000.0      801.0       150.0
+     91           0.29     491.0   1062.0      731.0       137.0
+     92           0.31     496.0   1124.0      731.0       137.0
+```
+The main 3 variables to consider when sizing the horizontal tail for longitudinal static stability are: tail moment arm, tail plane area, and CG position. In short, increasing the moment arm and area increase the longitudinal stability of the aircraft for a given CG because it moves the neutral point away from the CG. The neutral point is the point where, if the CG was placed on it, $C_M/\alpha=0$. Static margin $SM=x_{np}-x_{cg}$ and should be around 0.1 to 0.3.
+
+![image](https://user-images.githubusercontent.com/79290428/179372143-76feda57-bf6f-440a-8225-7f2c195c8e32.png)
+
+**Fig. 2 - $C_M/\alpha$ curves for stable, neutral and unstable aircraft.**
 
 The tail moment arm is likely restricted in some way because of structural constraints so there is a balance between the tail area and moment arm.
 
@@ -28,14 +39,15 @@ The tail moment arm is likely restricted in some way because of structural const
 - Generates wing configurations with varying dihedral angle with a set spanwise dihedral location. 
 - Calculates roll and dutch roll damping modes for each configuration.
 - Runs aero analysis, generating Cl and Cd polars, and relevant stability derivatives.
-
 - AVL solution becomes very unstable as dihedral span location approaches tail sections in y.
+- Doesn't really work very well at the moment for some reason...
 
-#### aero.py useage:
-example useage to come
+## Aero:
+- Generate some quick aerodynamic coefficient polars, stability derivatives, and eigenmode frequencies and dampings for a range of angles of attack.
+- Used in dihedral.py for calculating aerodynamic effect of dihedral angle.
 
-#### Required files in same directory:
-- avl.exe
-- Config files
-- Input plane .avl file
+### Required files in same directory:
+- avl.exe (https://web.mit.edu/drela/Public/web/avl/)
+- Config files (aero, dihedral, and tail).
+- Input plane .avl file (see https://web.mit.edu/drela/Public/web/avl/avl_doc.txt for info; xflr5 can export AVL compatible files).
 - aerofoil .dat files
