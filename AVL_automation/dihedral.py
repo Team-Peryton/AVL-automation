@@ -158,7 +158,8 @@ class Dihedral():
 
         plt.tight_layout()
         
-        geom_plt=self.plot_geom()
+        if self.plot_geom==True:
+            geom_plt=self.plot_geom()
 
         plt.show()
 
@@ -185,7 +186,7 @@ class Dihedral():
         ax1.plot(dihedral_angles,Cl_delta,label="Lift ($C_{L}$)")
         ax1.plot(dihedral_angles,Cd_delta,label="Lift ($C_{D}$)")
 
-        ax1.set_ylabel(f"\u0394 (%) @ {self.planes[0].polars['Alpha (deg)'].iloc[-1]}\u00B0")
+        ax1.set_ylabel(f"\u0394 (%) @ {self.planes[0].polars['Alpha (deg)'].iloc[-1]}\u00B0 AoA")
         ax1.legend(loc='upper left')
         ax1.set_title("Aero Coeffients")
 
@@ -204,7 +205,7 @@ class Dihedral():
 
         ax3.plot(dihedral_angles,spiral)   
         ax3.set_title("Spiral Stability (>1 = stable)")
-        ax3.set_xlabel(f"Dihedral Angle - Split Location={self.planes[0].dihedral_split}% of Span")
+        ax3.set_xlabel(f"Dihedral Angle (\u00B0) - Split Location={self.planes[0].dihedral_split}% of Span")
 
         return plt
 
@@ -225,7 +226,7 @@ class Dihedral():
         roll_delta=[100*(plane.modes["roll"][0][0]-roll_0)/roll_0 for plane in self.planes]
         dutch_delta=[100*(plane.modes["dutch"][0][0]-dutch_0)/dutch_0 for plane in self.planes]
 
-        ax4.set_xlabel(f"Dihedral Angle - Split Location={self.planes[0].dihedral_split}% of Span")
+        ax4.set_xlabel(f"Dihedral Angle (\u00B0) - Split Location={self.planes[0].dihedral_split}% of Span")
         ax4.set_ylabel("\u0394 Damping (%)")
         ax4.set_title("Eigenmode Damping")
 
