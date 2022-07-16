@@ -1,4 +1,4 @@
-from avl import Aero
+from aero import Aero
 from geometry import Plane,Section
 from matplotlib import pyplot as plt
 import numpy as np
@@ -43,7 +43,13 @@ class Dihedral():
         with open(config_file,'r') as f:
             lines=f.readlines()
         lines=[line for line in lines if line[0]!="#" and line!="\n"]   #   cleans input
-    
+
+        if lines[0].strip()!="DIHEDRAL CONFIG":
+            print(f"\u001b[31m[Error]\u001b[0m Wrong config file type ({config_file}).")
+            exit()
+
+        lines=lines[1:]
+
         self.plane_file         = lines[0].split(": ")[1:][0].strip()
         self.wing_aerofoil      = lines[1].split(": ")[1:][0]
         self.elevator_aerofoil  = lines[2].split(": ")[1:][0]
@@ -85,7 +91,7 @@ class Dihedral():
         for theta in theta_range:
             name=str(count)
 
-            plane=Plane(name)
+            plane=Plane(name=name)
             plane.dihedral_angle=theta
             plane.dihedral_split=self.span_loc
             
@@ -135,9 +141,8 @@ class Dihedral():
         if aero.polars==False or aero.modes==False:
             raise ValueError("Polars and modes must be enabled for dihedral analysis.")
 
-        print("Polar analysis...")
         #   Can't do multithreaded analysis without some thinking and extra code :(
-        for plane in tqdm(self.planes):
+        for plane in tqdm(self.planes,desc="Aero analysis"):
             aero.run(plane)
 
         return None
