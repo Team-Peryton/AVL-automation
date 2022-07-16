@@ -114,12 +114,16 @@ class Dihedral():
 
     def run(self):
         aero=Aero(self.aero_config_file)    #   initialises aero analysis, reads config file.
+        if aero.polars==False or aero.modes==False:
+            raise ValueError("Polars and modes must be enabled for dihedral analysis.")
 
         tasks=[(plane,aero) for plane in self.planes]
 
         print("Polar analysis...")
-        with ThreadPoolExecutor(max_workers=self.threads) as pool:
-            list(tqdm(pool.map(self.aero_analysis,tasks),total=len(tasks)))
+        for task in tqdm(tasks):
+            self.aero_analysis(task)
+        #with ThreadPoolExecutor(max_workers=self.threads) as pool:
+        #    list(tqdm(pool.map(self.aero_analysis,tasks),total=len(tasks)))
 
         return None
 
@@ -129,8 +133,20 @@ class Dihedral():
 
         return None
 
-    def plot_polars(self):
-        fig,(ax1,ax2,ax3)=plt.subplots(ncols=3,figsize=(12,4))
+    def plot(self):
+        fig,((ax1,ax2),(ax3,ax4))=plt.subplots(2,2,figsize=(9,9),sharex=True)
+        
+        polar_plt=self.plot_polars(ax1,ax2,ax3)
+        mode_plt=self.plot_modes(ax4)
+
+        plt.tight_layout()
+
+        
+        geom_plt=self.plot_geom()
+
+        plt.show()
+
+    def plot_polars(self,ax1,ax2,ax3):
         
         dihedral_angles=[plane.dihedral_angle for plane in self.planes]
         Cl_0=self.planes[0].polars['Cl'].iloc[-1]
@@ -138,55 +154,49 @@ class Dihedral():
         Cl_delta=[100*(plane.polars['Cl'].iloc[-1]-Cl_0)/Cl_0 for plane in self.planes]
         Cd_delta=[100*(plane.polars['Cd'].iloc[-1]-Cd_0)/Cd_0 for plane in self.planes]
 
-        ax1.plot(dihedral_angles,Cl_delta,label="\u0394Cl",color='r')
-        ax1.plot(dihedral_angles,Cd_delta,label="\u0394Cd",color='b')
-        ax1.set_xlabel("Dihedral Angles (\u00B0)")
+        ax1.plot(dihedral_angles,Cl_delta,label="Lift ($C_{L}$)")
+        ax1.plot(dihedral_angles,Cd_delta,label="Lift ($C_{D}$)")
+
         ax1.set_ylabel(f"\u0394 (%) @ {self.planes[0].polars['Alpha (deg)'].iloc[-1]}\u00B0")
         ax1.legend(loc='upper left')
         ax1.set_title("Aero Coeffients")
 
-        Clb_0=self.planes[0].polars['Clb'].iloc[0]
-        Clp_0=self.planes[0].polars['Clp'].iloc[0]
-        Clb_delta=[100*(plane.polars['Clb'].iloc[0]-Clb_0)/Clb_0 for plane in self.planes]
-        Clp_delta=[100*(plane.polars['Clp'].iloc[0]-Clp_0)/Clp_0 for plane in self.planes]
+        Clb=[plane.polars['Clb'].iloc[0] for plane in self.planes]
+        Clp=[plane.polars['Clp'].iloc[0] for plane in self.planes]
         
-        ax2.plot(dihedral_angles,Clb_delta,label="Dihedral Effect Derivative",color='r')
-        ax2.plot(dihedral_angles,Clp_delta,label="Roll rate derivative",color='b')
-        ax2.set_xlabel("Dihedral Angles (\u00B0)")
-        ax2.set_ylabel("\u0394 (%)")
+        ax2.plot(dihedral_angles,Clb,label="Dihedral ($Cl_{b}$)")
+        ax2.plot(dihedral_angles,Clp,label="Roll Rate ($Cl_{p}$)")
+
         ax2.legend()
         ax2.set_title("Stability Derivatives")
 
         spiral=[plane.polars['spiral'].iloc[0] for plane in self.planes]
 
-        ax3.plot(dihedral_angles,spiral,color='k')   
-        ax3.set_xlabel("Dihedral Angles (\u00B0)")
+        ax3.plot(dihedral_angles,spiral)   
         ax3.set_title("Spiral Stability (>1 = stable)")
+        ax3.set_xlabel(f"Dihedral Angle - Split Location={self.planes[0].dihedral_split}% of Span")
 
-        fig.tight_layout()
+        return 
 
-        return plt
-
-    def eigenvalues(self): 
+    def plot_modes(self,ax4): 
         dihedral_angles=[plane.dihedral_angle for plane in self.planes]
-        roll_0=self.planes[0].modes_modes["roll"][0]
-        dutch_0=self.planes[0].modes_modes["dutch"][0]
-        roll_delta=[100*(plane.modes_modes["roll"][0]-roll_0)/roll_0 for plane in self.planes]
-        dutch_delta=[100*(plane.modes_modes["dutch"][0]-dutch_0)/dutch_0 for plane in self.planes]
 
-        plt.figure(figsize=(4,4))
-        plt.title("Eigenmode Damping")
-        plt.xlabel(f"Dihedral Angle (\u00B0)\nSplit Location={[plane.dihedral_split for plane in self.planes][0]}% of Span")
-        plt.ylabel("\u0394 Damping (%)")
+        roll_0=self.planes[0].modes["roll"][0][0]
+        dutch_0=self.planes[0].modes["dutch"][0][0]
+        roll_delta=[100*(plane.modes["roll"][0][0]-roll_0)/roll_0 for plane in self.planes]
+        dutch_delta=[100*(plane.modes["dutch"][0][0]-dutch_0)/dutch_0 for plane in self.planes]
 
-        plt.plot(dihedral_angles,roll_delta,color='r',label="Roll")
-        plt.plot(dihedral_angles,dutch_delta,color='b',label="Dutch Roll")
-        plt.legend()
-        plt.tight_layout()
+        ax4.set_xlabel(f"Dihedral Angle - Split Location={self.planes[0].dihedral_split}% of Span")
+        ax4.set_ylabel("\u0394 Damping (%)")
+        ax4.set_title("Eigenmode Damping")
+
+        ax4.plot(dihedral_angles,roll_delta,label="Roll")
+        ax4.plot(dihedral_angles,dutch_delta,label="Dutch Roll")
+        ax4.legend()
         
-        return plt
+        return 
 
-    def geom_plot(self):
+    def plot_geom(self):
         plt.figure()
         plt.title("Spanwise Geometry Plot")
         plt.xlabel("Y (mm)")
@@ -198,8 +208,8 @@ class Dihedral():
         
         return plt
 
-
 if __name__=="__main__":
     dihedral=Dihedral('dihedral.config','aero.config')
     dihedral.generate_planes()
     dihedral.run()
+    dihedral.plot()

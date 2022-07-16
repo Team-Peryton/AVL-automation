@@ -214,7 +214,10 @@ class Aero():
                 case.Cd=float(lines[24].split()[2])
                 case.Clb=float(lines[38].split()[8])
                 case.Clp=float(lines[46].split()[5])
-                case.spiral=float(lines[52].split()[6])
+                try:
+                    case.spiral=float(lines[52].split()[6])
+                except IndexError:
+                    case.spiral=0
                 
             polars.append((case.alpha,case.Cl,case.Cd,case.Clb,case.Clp,case.spiral))
 
