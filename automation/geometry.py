@@ -1,5 +1,5 @@
 class Plane():
-    def __init__(self,name:str,geom_file=None):
+    def __init__(self,name:str=None,geom_file=None):
 
         self.name=name
         self.geom_file=geom_file
@@ -28,6 +28,9 @@ class Plane():
         self.b_tv=None
         self.c_t=None
         self.theta=None
+
+        if self.name==None:
+            self.name="plane"
 
         if geom_file!=None:
             self.read(geom_file)
