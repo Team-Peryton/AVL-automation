@@ -9,6 +9,7 @@ import copy
 
 class Dihedral():
     def __init__(self,dihedral_config_file:str,aero_config_file:str):
+
         #   Clean temp folders.
         path=os.path.abspath(os.getcwd())
         try:
@@ -19,8 +20,8 @@ class Dihedral():
             if os.path.isdir(path+"/cases")==True:
                 shutil.rmtree(path+"/cases")
         except PermissionError:
-            print("! Close all results/geometry/case files !")
-            exit()
+            raise PermissionError("Close all results/geometry/case files !")
+
         os.mkdir(path+"/generated planes")
         os.mkdir(path+"/results")
         os.mkdir(path+"/cases")
@@ -238,7 +239,7 @@ class Dihedral():
         """
         plt.figure()
         plt.title("Spanwise Geometry Plot")
-        
+
         plt.xlabel("Y (mm)")
         plt.ylabel("Z (mm)")  
         plt.xlim(0,max([plane.tipY for plane in self.planes]))
