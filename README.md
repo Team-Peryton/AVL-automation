@@ -1,7 +1,7 @@
 # AVL-automation
-Surrey Team Peryton Heron IMechE UAS 2022 AVL automation program. Enabled automatic tail sizing based on input aircraft geometry, and investigation of dihedral angle effects on stability and aerodynamic performance. 
+Surrey Team Peryton Heron IMechE UAS 2022 AVL automation program. Enables automatic tail sizing based on input aircraft geometry, and investigation of dihedral angle effects on stability and aerodynamic performance. 
 
-A lose wrapping of the vortex lattice method AVL provides a means of scripting these tools.
+A lose wrapping of the vortex lattice method [AVL](https://web.mit.edu/drela/Public/web/avl/) provides a means of scripting these tools.
 
 ## Usage
 1. Install python (tested on 3.9.5)
@@ -46,7 +46,7 @@ The tail moment arm is likely restricted in some way because of structural const
 - Generate some quick aerodynamic coefficient polars, stability derivatives, and eigenmode frequencies and dampings for a range of angles of attack.
 - Used in dihedral.py for calculating aerodynamic effect of dihedral angle.
 
-#### Required files in same directory:
+### Required files in same directory:
 - avl.exe (https://web.mit.edu/drela/Public/web/avl/)
 - Config files (aero, dihedral, and tail).
 - Input plane .avl file (see https://web.mit.edu/drela/Public/web/avl/avl_doc.txt for info; xflr5 can export AVL compatible files).
