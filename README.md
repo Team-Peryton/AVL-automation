@@ -3,6 +3,13 @@ Surrey Team Peryton Heron IMechE UAS 2022 AVL automation program. Enabled automa
 
 A lose wrapping of the vortex lattice method AVL provides a means of scripting these tools.
 
+## Usage
+1. Install python (tested on 3.9.5)
+2. Install packages in requirements.txt
+   >pip install -r requirements.txt
+3. Run avl-automation.py from the command line. For help:
+   >py avl-automation.py -h
+
 ## Tail Sizing
 - Suggests tail configurations based on input geometry to achieve a desired static margin.
 - Works for convensional & V-tail configurations.
