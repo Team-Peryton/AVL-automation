@@ -27,6 +27,7 @@ class Plane():
         self.b_th=None
         self.b_tv=None
         self.c_t=None
+        self.theta=None
 
         if geom_file!=None:
             self.read(geom_file)

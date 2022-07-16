@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 import copy
+import pandas as pd
 
 from geometry import Plane,Section
 from avl import Case,avl_cmd
@@ -101,10 +102,10 @@ class AutoTail():
                 plane.St_h=St_h
                 plane.mac=mac
                 plane.sm_ideal=self.sm_ideal
+                plane.tail_config=self.config
 
                 if self.calc_cg==False:
                     plane.Xcg=self.Xcg
-                plane.tail_config=self.config
 
                 mod_geom=copy.copy(self.ref_plane.file_str)
 
@@ -114,19 +115,17 @@ class AutoTail():
                 else:
                     chord=round(np.sqrt(St_h/ARt)*1000,3)     #   Calculates h chord based on area & AR
                     span=round(np.sqrt(St_h*ARt)*1000,3)      #   Calculates HTP span (mm)
-                try:
-                    Zle=round((self.St_v*(1000**2))/(2*chord),3)         #   Calculates tip height (inverted v tail) (mm)
-                except:
-                    exit()
+
+                Zle=round((self.St_v*(1000**2))/(2*chord),3)         #   Calculates tip height (inverted v tail) (mm)
+                plane.theta=round(np.rad2deg(np.arctan(Zle/(span/2))))
 
                 plane.b_th=round(span,0)
-                plane.b_tv=round(Zle,0)
                 plane.c_t=round(chord,0)
 
                 if self.config==0 and self.b_th=="-":                
                     root=Section(Lt,0,0,chord,10,-1,self.elevator_aerofoil)    #   Defines root section (object)
                 elif self.config==1:          
-                    root=Section(Lt,0,Zle,chord,10,-1,self.elevator_aerofoil)
+                    root=Section(Lt,0,plane.Zle,chord,10,-1,self.elevator_aerofoil)
                 else:
                     print("\nInvalid self.configuration selected.")
                     exit()
@@ -151,7 +150,7 @@ class AutoTail():
         print("Planes generated...")
         self.planes=planes
 
-        return(planes)
+        return planes
 
     def run(self):
         self.case=Case(self.Xcg,self.Ycg,self.Zcg,self.mass)
@@ -165,6 +164,8 @@ class AutoTail():
         tasks=[plane for plane in self.planes]
         with ThreadPoolExecutor(max_workers=self.threads) as pool: #   Starts post processing on multiple threads
             pool.map(self.calc_SM,tasks)
+
+        return None
 
     def stab_analysis(self,tasks):
         case,plane=tasks
@@ -200,55 +201,53 @@ class AutoTail():
         x=[plane.St_h for plane in self.planes]
         y=[plane.Lt for plane in self.planes]
 
-        if self.planes[0].tail_config==1:
-                zz="z (mm):"
-        else:
-            zz=""
-
         if self.calc_cg==False:
             z=[plane.sm for plane in self.planes]
 
             ax.scatter(x,y,z,c=z)
-            ax.set_xlabel("St_h (m^2)")
+            ax.set_xlabel("${St_h}$ (${m^2}$)")
             ax.set_ylabel("Lt (m)")
             ax.set_zlabel("SM")
     
-            solutions=[f"\nPossible configurations:\nPlane ID:\tSM:\tnp\tLt (mm):\tb (mm):\tc (mm):\t{zz}\n"]
+            columns=["Plane ID","Static Margin","Xnp (mm)","Xt (mm)","Span (mm)","Chord (mm)","Angle (deg)"]
+            solutions=[]
             for plane in self.planes:
                 if np.isclose(plane.sm,plane.sm_ideal,rtol=self.tolerance)==True:
-                    solutions.append(plane.name.split("-")[0])
-                    solutions.append(f"\t\t{str(plane.sm)}\t{str(plane.np)}\t{str(plane.Lt)}\t\t{str(plane.b_th)}\t{str(plane.c_t)}\t{str(plane.b_tv if zz!='' else '')}\n")
+                    solutions.append([plane.name.split("-")[0],plane.sm,plane.np,plane.Lt,plane.b_th,plane.c_t,plane.theta])
             
-            if len(solutions)==1:
-                print("\nNo ideal configurations possible. Consider changing limits.")
-            else:
-                solutions.append("\nConsider refining limits around possible configurations.\n")
-                print("".join(solutions))
+            solutions_df=pd.DataFrame(solutions,columns=columns)
+            if self.config==0:
+                solutions_df=solutions_df[["Plane ID","Static Margin","Xnp (mm)","Xt (mm)","Span (mm)","Chord (mm)"]]
+                solutions_df.rename(columns={"Span (mm)": "H Span (mm)","Chord (mm)":"H Chord (mm)"})
 
-        else:
+        elif self.calc_cg==True:
             z=[plane.np for plane in self.planes]
 
             ax.scatter(x,y,z,c=z)
-            ax.set_xlabel("St_h (m^2)")
+            ax.set_xlabel("${St_h}$ (${m^2}$)")
             ax.set_ylabel("Lt (m)")
             ax.set_zlabel(f"Xcg for SM={self.planes[0].sm_ideal}")
 
-            solutions=["\nPossible configurations:\nPlane ID:\tXcg:\tnp (mm)\tLt (mm):\tb (mm):\tc (mm):\t{zz}\n"]
+            columns=["Plane ID","Xcg","Xnp","Xt","Span (mm)","Chord (mm)","Angle (deg)"]
+            solutions=[]
             for plane in self.planes:
-                solutions.append(plane.name.split("-")[0])
-                solutions.append(f"\t\t{str(plane.Xcg)}\t{str(plane.np)}\t{str(plane.Lt)}\t\t{str(plane.b_th)}\t{str(plane.c_t)}\t{str(plane.b_tv if zz!='' else '')}\n")
+                if np.isclose(plane.sm,plane.sm_ideal,rtol=self.tolerance)==True:
+                    solutions.append(plane.name.split("-")[0],plane.Xcg,plane.np,plane.Lt,plane.b_th,plane.c_t,plane.theta)
 
-            print("".join(solutions))
+            solutions_df=pd.DataFrame(solutions,columns=columns)
+            if self.config==0:
+                solutions_df=solutions_df[["Plane ID","Xcg (mm)","Xnp (mm)","Xt (mm)","Span (mm)","Chord (mm)"]]
+                solutions_df.rename(columns={"Span (mm)": "H Span (mm)","Chord (mm)":"H Chord (mm)"})
+
+        
+        if len(solutions)==1:
+            print("\nNo ideal configurations possible. Consider changing limits.")
+        else:
+            print("\nPossible configurations:\n")
+            print(solutions_df)
+            print("\nConsider refining limits around possible configurations.\n")
 
         plt.show()
-
-        return None
-
-    def plot_plane(self,id):
-        """
-        Plots plane geometry with dimensions.
-        """
-        
 
         return None
 
