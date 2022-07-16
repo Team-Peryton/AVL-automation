@@ -29,7 +29,7 @@ Plane ID  Static Margin  Xnp (mm)  Xt (mm)  Span (mm)  Chord (mm)
 ```
 The main 3 variables to consider when sizing the horizontal tail for longitudinal static stability are: tail moment arm, tail plane area, and CG position. In short, increasing the moment arm and area increase the longitudinal stability of the aircraft for a given CG because it moves the neutral point away from the CG. The neutral point is the point where, if the CG was placed on it, $C_M/\alpha=0$. Static margin $SM=x_{np}-x_{cg}$ and should be around 0.1 to 0.3.
 
-![image](https://user-images.githubusercontent.com/79290428/179372143-76feda57-bf6f-440a-8225-7f2c195c8e32.png)
+![image](https://user-images.githubusercontent.com/79290428/179372590-fcfc5e14-8e66-4287-8e49-efd22b70ba7f.png)
 
 **Fig. 2 - $C_M/\alpha$ curves for stable, neutral and unstable aircraft.**
 
