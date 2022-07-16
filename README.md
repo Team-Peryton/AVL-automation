@@ -10,6 +10,12 @@ A lose wrapping of the vortex lattice method [AVL](https://web.mit.edu/drela/Pub
 3. Run avl-automation.py from the command line. For help:
    >py avl-automation.py -h
    
+The following are required in the same directory as avl-automation.py:
+- avl.exe (https://web.mit.edu/drela/Public/web/avl/)
+- Config files (aero, dihedral, and tail).
+- Input plane .avl file (see https://web.mit.edu/drela/Public/web/avl/avl_doc.txt for info; xflr5 can export AVL compatible files).
+- aerofoil .dat files
+   
 If you get a seemingly random error it's likely because your input .avl plane file is formatted incorrectly. Submit an issue containing the .avl file and your config file(s) and I'll either fix the code or tell you how to fix your inputs :)
 
 ## Tail Sizing
@@ -47,9 +53,3 @@ The tail moment arm is likely restricted in some way because of structural const
 ## Aero:
 - Generate some quick aerodynamic coefficient polars, stability derivatives, and eigenmode frequencies and dampings for a range of angles of attack.
 - Used in dihedral.py for calculating aerodynamic effect of dihedral angle.
-
-### Required files in same directory:
-- avl.exe (https://web.mit.edu/drela/Public/web/avl/)
-- Config files (aero, dihedral, and tail).
-- Input plane .avl file (see https://web.mit.edu/drela/Public/web/avl/avl_doc.txt for info; xflr5 can export AVL compatible files).
-- aerofoil .dat files
