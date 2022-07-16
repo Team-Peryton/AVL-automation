@@ -8,6 +8,12 @@ import shutil
 from geometry import Plane
 
 def avl_cmd(cmd_str:str)->None:
+    """
+    Opens AVL in a subprocess and submits command string.
+
+    Arguments:
+        cmd_str {string} -- Command string to be submitted to AVL. Essentially key presses.
+    """
     avl_subprocess=sp.Popen(
         ['avl.exe'],
         stdin=sp.PIPE,
@@ -21,6 +27,10 @@ def avl_cmd(cmd_str:str)->None:
 
 class Case():
     def __init__(self,Xcg,Ycg,Zcg,mass,Ixx=None,Iyy=None,Izz=None,velocity=None,alpha=None,modes=False,polars=False,id=False):
+        """
+        Most of these class inits were written when I didn't fully understand what they were for lol
+        """
+        
         self.Xcg=Xcg
         self.Ycg=Ycg
         self.Zcg=Zcg
@@ -43,6 +53,9 @@ class Case():
         self.spiral=None
 
     def write_aero_case(self):
+        """
+        Creates aero polar case string in AVL format and writes to file.
+        """
         case_str =  "\n---------------------------------------------\n"
         case_str += f"Run case  1:\n\n"
         case_str += f"alpha -> alpha = {self.alpha}\n"
@@ -68,7 +81,7 @@ class Case():
 
     def write_stab_case(self)->None:
         """
-        Creates case string & writes to file
+        Creates stability case string & writes to file
         """
         case_str =  "\n---------------------------------------------\n"
         case_str += "Run case  1:\n\n"
@@ -87,6 +100,7 @@ class Case():
 
 class Aero():
     def __init__(self,config_file:str):
+        #   Cleans temp folders.
         path=os.path.abspath(os.getcwd())
         if os.path.isdir(path+"/cases")==True:
             shutil.rmtree(path+"/cases")
@@ -97,7 +111,7 @@ class Aero():
 
         self.read_config(config_file)
 
-        alpha_range=np.linspace(
+        alpha_range=np.linspace(    #   AoA range.
             self.alpha0,
             self.alpha1,
             int(1+(self.alpha1-self.alpha0)/self.increment)
@@ -105,7 +119,7 @@ class Aero():
 
         self.cases=[]
         for alpha in alpha_range:
-            self.cases.append(Case(
+            self.cases.append(Case( #   Creates case objects for range of alphas
                 Xcg=self.Xcg,
                 Ycg=self.Ycg,
                 Zcg=self.Zcg,
@@ -124,6 +138,9 @@ class Aero():
     def read_config(self,file:str)->None:
         """
         Reads aero config file.
+
+        Arguments:
+            file {string} -- Aero config file.
         """
         str_to_bool=lambda x:True if (x=="Y") else False
 
@@ -154,16 +171,24 @@ class Aero():
         return None
 
     def run(self,plane):
-        #   Writes case files & adds filepath to case obj
+        """
+        Writes cases and runs aero analyses.
+
+        Arguments:
+            plane {geometry.Plane} -- Plane object to run analysis on.
+        """
+        #   Write cases to file.
         with ThreadPoolExecutor(max_workers=self.threads) as pool:
             pool.map(self.create_cases,self.cases)
 
         plane.cases=self.cases
 
+        #   Run aero analysis. Eigenmode and polar analysis both included.
         tasks=[(case,plane) for case in self.cases]
         with ThreadPoolExecutor(max_workers=self.threads) as pool:
             pool.map(self.analysis,tasks)
 
+        # Both of these will be true because they're required.
         if self.modes==True:
             plane.modes=self.read_modes()
         if self.polars==True:
@@ -172,11 +197,18 @@ class Aero():
         return None
 
     def create_cases(self,case):
+        """Short function for multithreading sake."""
         case.write_aero_case()
 
         return None
 
     def analysis(self,tasks):
+        """
+        Writes command string and submits to AVL for polar and eigenmode analysis.
+
+        Arguments:
+            tasks {tuple[Case,Plane]} -- Case and plane to run analysis on.
+        """
         case,plane=tasks
 
         cmd_str=f"load {plane.geom_file}\n"
@@ -205,6 +237,12 @@ class Aero():
         return None
 
     def read_aero(self):
+        """
+        Reads aero polar results files.
+
+        Returns:
+            polars_df {pd.DataFrame} -- Dataframe with polar and stab. derivative data for each alpha.
+        """
         polars=[]
         for case in self.cases:
             with open(case.polars_results_file,'r') as file:
@@ -226,11 +264,21 @@ class Aero():
         return polars_df
 
     def read_modes(self):
+        """
+        Reads eigenmode results files.
+
+        Returns:
+            modes_df {pd.DataFrame} -- Dataframe with eigenmode data for each alpha.
+        """
         modes=[]
         for case in self.cases:
             with open(case.modes_results_file,'r') as file:
                 lines=file.readlines()
 
+                #   AVL doesn't label which are which in results file and sometimes doesn't
+                #   write them which is very annoying. Dutch roll and roll subsidence are the
+                #   important ones and are consistently in the expected place in the file so
+                #   everything else gets commented out ¯\_(ツ)_/¯
                 try:
                     case.dutch=tuple(map(float,lines[3].split()[1:]))
                     #case.ndutch=tuple(map(float,lines[4].split()[1:]))
