@@ -147,6 +147,12 @@ class Aero():
         with open(file,'r') as f:
             lines=f.readlines()
         lines=[line for line in lines if line[0]!="#" and line!="\n"]
+        
+        if lines[0].strip()!="AERO CONFIG":
+            print(f"\u001b[31m[Error]\u001b[0m Wrong config file ({file}).")
+            exit()
+
+        lines=lines[1:]
 
         try:
             self.mass       = float(lines[0].split()[1])
@@ -161,12 +167,12 @@ class Aero():
             self.alpha1     = float(lines[9].split()[1])
             self.increment  = float(lines[10].split()[1])
             self.threads    = int(lines[11].split()[1])
-            self.units      = lines[12].split()[1]
-            self.polars     = str_to_bool(lines[13].split()[1])
-            self.modes      = str_to_bool(lines[14].split()[1])
+            self.polars     = str_to_bool(lines[12].split()[1])
+            self.modes      = str_to_bool(lines[13].split()[1])
         except IndexError:
-            print("Parameters must have a value assigned. (AERO_CONFIG.txt)")
+            print("Parameters must have a value assigned.")
             exit()
+        
 
         return None
 
@@ -213,7 +219,6 @@ class Aero():
 
         cmd_str=f"load {plane.geom_file}\n"
         cmd_str+=f"case {case.case_file}\n"
-        cmd_str+=f"mass {self.units}\n"
         cmd_str+="oper\no\nv\n\nx\n"
 
         results_file=f"results/{plane.name}-{str(case.alpha)}deg"
@@ -320,7 +325,7 @@ class Aero():
         return modes_df
 
 if __name__=="__main__":
-    plane=Plane('aria3',geom_file='aria3.avl')
+    plane=Plane(geom_file='example_plane.avl')
 
     aero=Aero("aero.config")
     aero.run(plane)
