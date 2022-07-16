@@ -33,7 +33,7 @@ The main 3 variables to consider when sizing the horizontal tail for longitudina
 
 **Fig. 2 - $C_M/\alpha$ curves for stable, neutral and unstable aircraft.**
 
-The tail moment arm is likely restricted in some way because of structural constraints so there is a balance between the tail area and moment arm.
+The tail moment arm is likely restricted in some way because of structural constraints so there is a balance between the tail area and moment arm. Something that would be nice to add to the tail sizing program is calculating the required angle of incidence on the horizontal tail for a desired trim angle, but this can be done fairly easily within AVL itself given a bit of setup in the plane.avl file.
 
 ## Dihedral
 - Generates wing configurations with varying dihedral angle with a set spanwise dihedral location. 
