@@ -211,7 +211,7 @@ class AutoTail():
 
             ax.scatter(x,y,z,c=z)
             ax.set_xlabel("${St_h}$ (${m^2}$)")
-            ax.set_ylabel("Lt (m)")
+            ax.set_ylabel("Lt (mm)")
             ax.set_zlabel("SM")
     
             columns=["Plane ID","Static Margin","Xnp (mm)","Xt (mm)","Span (mm)","Chord (mm)","Angle (deg)"]
