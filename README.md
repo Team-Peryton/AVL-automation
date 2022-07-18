@@ -9,6 +9,14 @@ A lose wrapping of the vortex lattice method [AVL](https://web.mit.edu/drela/Pub
    >pip install -r requirements.txt
 3. Run avl-automation.py from the command line. For help:
    >py avl-automation.py -h
+   
+The following are required in the same directory as avl-automation.py:
+- avl.exe (https://web.mit.edu/drela/Public/web/avl/)
+- Config files (aero, dihedral, and tail).
+- Input plane .avl file (see https://web.mit.edu/drela/Public/web/avl/avl_doc.txt for info; xflr5 can export AVL compatible files).
+- aerofoil .dat files
+   
+If you get a seemingly random error it's likely because your input .avl plane file is formatted incorrectly. Submit an issue containing the .avl file and your config file(s) and I'll either fix the code or tell you how to fix your inputs :)
 
 ## Tail Sizing
 - Suggests tail configurations based on input geometry to achieve a desired static margin.
@@ -29,11 +37,11 @@ Plane ID  Static Margin  Xnp (mm)  Xt (mm)  Span (mm)  Chord (mm)
 ```
 The main 3 variables to consider when sizing the horizontal tail for longitudinal static stability are: tail moment arm, tail plane area, and CG position. In short, increasing the moment arm and area increase the longitudinal stability of the aircraft for a given CG because it moves the neutral point away from the CG. The neutral point is the point where, if the CG was placed on it, $C_M/\alpha=0$. Static margin $SM=x_{np}-x_{cg}$ and should be around 0.1 to 0.3.
 
-![image](https://user-images.githubusercontent.com/79290428/179372143-76feda57-bf6f-440a-8225-7f2c195c8e32.png)
+![image](https://user-images.githubusercontent.com/79290428/179372590-fcfc5e14-8e66-4287-8e49-efd22b70ba7f.png)
 
 **Fig. 2 - $C_M/\alpha$ curves for stable, neutral and unstable aircraft.**
 
-The tail moment arm is likely restricted in some way because of structural constraints so there is a balance between the tail area and moment arm.
+The tail moment arm is likely restricted in some way because of structural constraints so there is a balance between the tail area and moment arm. Something that would be nice to add to the tail sizing program is calculating the required angle of incidence on the horizontal tail for a desired trim angle, but this can be done fairly easily within AVL itself given a bit of setup in the plane.avl file.
 
 ## Dihedral
 - Generates wing configurations with varying dihedral angle with a set spanwise dihedral location. 
@@ -45,9 +53,3 @@ The tail moment arm is likely restricted in some way because of structural const
 ## Aero:
 - Generate some quick aerodynamic coefficient polars, stability derivatives, and eigenmode frequencies and dampings for a range of angles of attack.
 - Used in dihedral.py for calculating aerodynamic effect of dihedral angle.
-
-### Required files in same directory:
-- avl.exe (https://web.mit.edu/drela/Public/web/avl/)
-- Config files (aero, dihedral, and tail).
-- Input plane .avl file (see https://web.mit.edu/drela/Public/web/avl/avl_doc.txt for info; xflr5 can export AVL compatible files).
-- aerofoil .dat files
