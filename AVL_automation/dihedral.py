@@ -138,8 +138,8 @@ class Dihedral():
         Runs aero analysis.
         """
         aero=Aero(self.aero_config_file)    #   initialises aero analysis, reads config file.
-        if aero.polars==False or aero.modes==False:
-            raise ValueError("Polars and modes must be enabled for dihedral analysis.")
+        if aero.polars==False:
+            raise ValueError("Polars must be enabled for dihedral analysis.")
 
         #   Can't do multithreaded analysis without some thinking and extra code :(
         for plane in tqdm(self.planes,desc="Aero analysis"):
@@ -151,10 +151,10 @@ class Dihedral():
         """
         Main plot function. Handles polar and eigenmode plots in subplots.
         """
-        fig,((ax1,ax2),(ax3,ax4))=plt.subplots(2,2,figsize=(9,9),sharex=True)
+        fig,(ax1,ax2,ax3)=plt.subplots(ncols=3,figsize=(12,3),sharex=True)
         
         polar_plt=self.plot_polars(ax1,ax2,ax3)
-        mode_plt=self.plot_modes(ax4)
+        #mode_plt=self.plot_modes(ax4)
 
         plt.tight_layout()
         
@@ -199,13 +199,16 @@ class Dihedral():
 
         ax2.legend()
         ax2.set_title("Stability Derivatives")
+        ax2.set_ylabel("Dervative [NA]")
+        ax2.set_xlabel(f"Dihedral Angle (\u00B0) - Split Location={self.planes[0].dihedral_split}% of Span")
 
         #   Spiral stability plot
-        spiral=[plane.polars['spiral'].iloc[0] for plane in self.planes]
+        spiral=[plane.polars['spiral'].iloc[1] for plane in self.planes]
 
         ax3.plot(dihedral_angles,spiral)   
         ax3.set_title("Spiral Stability (>1 = stable)")
-        ax3.set_xlabel(f"Dihedral Angle (\u00B0) - Split Location={self.planes[0].dihedral_split}% of Span")
+        #ax3.set_xlabel(f"Dihedral Angle (\u00B0) - Split Location={self.planes[0].dihedral_split}% of Span")
+        ax3.set_ylabel("Clb.Cnr / Clr.Cnb [NA]")
 
         return plt
 

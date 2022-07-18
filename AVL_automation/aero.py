@@ -260,7 +260,14 @@ class Aero():
                 try:
                     case.spiral=float(lines[52].split()[6])
                 except IndexError:
-                    case.spiral=0
+                    Cnb=float(lines[40].split()[8])
+                    Clr=float(lines[46].split()[11])
+                    Cnr=float(lines[48].split()[11])
+
+                    try:
+                        case.spiral=(case.Clb*Cnr)/(Clr*Cnb)
+                    except ZeroDivisionError:
+                        case.spiral=np.NaN
                 
             polars.append((case.alpha,case.Cl,case.Cd,case.Clb,case.Clp,case.spiral))
 
