@@ -45,10 +45,13 @@ The tail moment arm is likely restricted in some way because of structural const
 
 ## Dihedral
 - Generates wing configurations with varying dihedral angle with a set spanwise dihedral location. 
-- Calculates roll and dutch roll damping modes for each configuration.
 - Runs aero analysis, generating Cl and Cd polars, and relevant stability derivatives.
 - AVL solution becomes very unstable as dihedral span location approaches tail sections in y.
-- Doesn't really work very well at the moment for some reason...
+- It would be nice to show the effect on dutch roll and roll subsidence modes but AVL is difficult to get to work with dynamic stability analyses.
+
+![image](https://user-images.githubusercontent.com/79290428/179610350-5d2b92fd-5ed4-42a4-81e1-4591e40f4666.png)
+
+**Fig. 3 - Dihedral angle effect on $C_L$, $C_D$, and stability derivatives.**
 
 ## Aero:
 - Generate some quick aerodynamic coefficient polars, stability derivatives, and eigenmode frequencies and dampings for a range of angles of attack.
