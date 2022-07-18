@@ -3,6 +3,8 @@ Surrey Team Peryton Heron IMechE UAS 2022 AVL automation program. Enables automa
 
 A lose wrapping of the vortex lattice method [AVL](https://web.mit.edu/drela/Public/web/avl/) provides a means of scripting these tools.
 
+The tail sizing segment has been validated against 2 flying UAVs and, given the CG is in the right place, suggests perfectly stable tail configurations.
+
 ## Usage
 1. Install python (tested on 3.9.5)
 2. Install packages in requirements.txt
