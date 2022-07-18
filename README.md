@@ -56,3 +56,10 @@ The tail moment arm is likely restricted in some way because of structural const
 ## Aero:
 - Generate some quick aerodynamic coefficient polars, stability derivatives, and eigenmode frequencies and dampings for a range of angles of attack.
 - Used in dihedral.py for calculating aerodynamic effect of dihedral angle.
+
+## Limitations:
+AVL is a vortex lattice method meaning it's good for early conceptual design and sizing but is not reliable for complete aerodynamic profiling and design because of the limitations of potential flow theory: 
+- Flow seperation and stall are not predicted;
+- No wake rollup is applied so tip losses are not well predicted;
+- Wing/fuselage interactions are not captured;
+- Solution is adversely affected if surfaces are placed directly downstream of the other due to trailing vortices influencing control points.
