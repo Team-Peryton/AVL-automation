@@ -16,7 +16,7 @@ The following are required in the same directory as avl-automation.py:
 - Input plane .avl file (see https://web.mit.edu/drela/Public/web/avl/avl_doc.txt for info; xflr5 can export AVL compatible files).
 - aerofoil .dat files
    
-If you get a seemingly random error it's likely because your input .avl plane file is formatted incorrectly. Submit an issue containing the .avl file and your config file(s) and I'll either fix the code or tell you how to fix your inputs :)
+If you get a seemingly random error it's likely because your input .avl plane file is formatted incorrectly. Raise an issue containing the .avl file and your config file(s) and I'll either fix the code or tell you how to fix your inputs :)
 
 ## Tail Sizing
 - Suggests tail configurations based on input geometry to achieve a desired static margin.
