@@ -68,7 +68,7 @@ class AutoTail():
             print("Input non-zero lower bound.")
             exit()
         
-        if self.Xcg=="-" and self.Ycg=="-" and self.Zcg=="-":
+        if self.Xcg=="NA" and self.Ycg=="NA" and self.Zcg=="NA":
             self.calc_cg=True
         else:
             self.calc_cg=False
@@ -224,35 +224,31 @@ class AutoTail():
             if self.config==0:
                 solutions_df=solutions_df[["Plane ID","Static Margin","Xnp (mm)","Xt (mm)","Span (mm)","Chord (mm)"]]
                 solutions_df.rename(columns={"Span (mm)": "H Span (mm)","Chord (mm)":"H Chord (mm)"})
+      
+            if len(solutions)==1:
+                print("\nNo ideal configurations possible. Consider changing limits.")
+            else:
+                print("\nPossible configurations:\n")
+                print(solutions_df)
+                print("\nConsider refining limits around possible configurations.\n")
+
+            plt.show()
 
         elif self.calc_cg==True:
             z=[plane.np for plane in self.planes]
 
             ax.scatter(x,y,z,c=z)
-            ax.set_xlabel("${St_h}$ (${m^2}$)")
+            ax.set_xlabel("St_h (m^2)")
             ax.set_ylabel("Lt (m)")
             ax.set_zlabel(f"Xcg for SM={self.planes[0].sm_ideal}")
 
-            columns=["Plane ID","Xcg","Xnp","Xt","Span (mm)","Chord (mm)","Angle (deg)"]
+            columns=["Plane ID","Xcg (mm)","np (mm)","Static Margin"]
             solutions=[]
             for plane in self.planes:
-                if np.isclose(plane.sm,plane.sm_ideal,rtol=self.tolerance)==True:
-                    solutions.append(plane.name.split("-")[0],plane.Xcg,plane.np,plane.Lt,plane.b_th,plane.c_t,plane.theta)
+                solutions.append([plane.name.split("-")[0],plane.Xcg,plane.np,self.sm_ideal])
 
             solutions_df=pd.DataFrame(solutions,columns=columns)
-            if self.config==0:
-                solutions_df=solutions_df[["Plane ID","Xcg (mm)","Xnp (mm)","Xt (mm)","Span (mm)","Chord (mm)"]]
-                solutions_df.rename(columns={"Span (mm)": "H Span (mm)","Chord (mm)":"H Chord (mm)"})
-
-        
-        if len(solutions)==1:
-            print("\nNo ideal configurations possible. Consider changing limits.")
-        else:
-            print("\nPossible configurations:\n")
-            print(solutions_df)
-            print("\nConsider refining limits around possible configurations.\n")
-
-        plt.show()
+            print("\n",solutions_df)
 
         return None
 
