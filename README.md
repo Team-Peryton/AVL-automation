@@ -3,6 +3,8 @@ Surrey Team Peryton Heron IMechE UAS 2022 AVL automation program. Enables automa
 
 A lose wrapping of the vortex lattice method [AVL](https://web.mit.edu/drela/Public/web/avl/) provides a means of scripting these tools.
 
+The tail sizing segment has been validated against 2 flying UAVs and, given the CG is in the right place, suggests perfectly stable tail configurations.
+
 ## Usage
 1. Install python (tested on 3.9.5)
 2. Install packages in requirements.txt
@@ -16,7 +18,7 @@ The following are required in the same directory as avl-automation.py:
 - Input plane .avl file (see https://web.mit.edu/drela/Public/web/avl/avl_doc.txt for info; xflr5 can export AVL compatible files).
 - aerofoil .dat files
    
-If you get a seemingly random error it's likely because your input .avl plane file is formatted incorrectly. Submit an issue containing the .avl file and your config file(s) and I'll either fix the code or tell you how to fix your inputs :)
+If you get a seemingly random error it's likely because your input .avl plane file is formatted incorrectly. Raise an issue containing the .avl file and your config file(s) and I'll either fix the code or tell you how to fix your inputs :)
 
 ## Tail Sizing
 - Suggests tail configurations based on input geometry to achieve a desired static margin.
@@ -45,11 +47,21 @@ The tail moment arm is likely restricted in some way because of structural const
 
 ## Dihedral
 - Generates wing configurations with varying dihedral angle with a set spanwise dihedral location. 
-- Calculates roll and dutch roll damping modes for each configuration.
 - Runs aero analysis, generating Cl and Cd polars, and relevant stability derivatives.
 - AVL solution becomes very unstable as dihedral span location approaches tail sections in y.
-- Doesn't really work very well at the moment for some reason...
+- It would be nice to show the effect on dutch roll and roll subsidence modes but AVL is difficult to get to work with dynamic stability analyses.
+
+![image](https://user-images.githubusercontent.com/79290428/179610350-5d2b92fd-5ed4-42a4-81e1-4591e40f4666.png)
+
+**Fig. 3 - Dihedral angle effect on $C_L$, $C_D$, and stability derivatives.**
 
 ## Aero:
 - Generate some quick aerodynamic coefficient polars, stability derivatives, and eigenmode frequencies and dampings for a range of angles of attack.
 - Used in dihedral.py for calculating aerodynamic effect of dihedral angle.
+
+## Limitations:
+AVL is a vortex lattice method meaning it's good for early conceptual design and sizing but is not reliable for complete aerodynamic profiling and design because of the limitations of potential flow theory: 
+- Flow seperation and stall are not predicted;
+- No wake rollup is applied so tip losses are not well predicted;
+- Wing/fuselage interactions are not captured;
+- Solution is adversely affected if surfaces are placed directly downstream of the other due to trailing vortices influencing control points.
