@@ -133,7 +133,7 @@ class AutoTail():
                 elif self.config==1:          
                     root=Section(Lt,0,plane.Zle,chord,10,-1,self.elevator_aerofoil)
                 else:
-                    print("\nInvalid self.configuration selected.")
+                    print("\nInvalid configuration selected.")
                     exit()
 
                 tip=Section(Lt,span/2,0,chord,10,-2,self.elevator_aerofoil)    #   Defines tip section (object)
