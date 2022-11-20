@@ -111,9 +111,9 @@ class Dihedral():
             split=Section(self.ref_plane.Xle,split_loc,0,mac,int((np.sqrt(Yle**2+Zle**2)-split_loc)*0.02),-1,self.elevator_aerofoil)
             tip=Section(self.ref_plane.Xle,Yle,Zle,mac,0,0,self.elevator_aerofoil)   #   Creates tip section based off tip geometry
             
-            mod_str=root.string()  #   Gets section string
-            mod_str+=split.string()
-            mod_str+=tip.string()
+            mod_str=str(root)  #   Gets section string
+            mod_str+=str(split)
+            mod_str+=str(tip)
 
             for index,line in enumerate(mod_geom):
                 if line=="MARKER\n":    #   Finds marker

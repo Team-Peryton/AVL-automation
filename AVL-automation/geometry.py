@@ -193,7 +193,7 @@ class Surface():
         self.angle=angle
         self.aerofoil=aerofoil
 
-    def string(self):
+    def __str__(self):
         surf_str    =   f"{self.name}\n#Nchord Cspace\n"
         surf_str    +=  f"{self.nchord} {self.cspace}\n"
 
@@ -219,7 +219,7 @@ class Section():
         self.sspace=sspace
         self.aerofoil=aerofoil
 
-    def string(self):
+    def __str__(self):
         section_str="SECTION\n#Xle Yle Zle Chord Ainc Nspan Sspace\n"
         section_str+=f"{self.Xle} {self.Yle} {self.Zle} {self.chord} {0} {self.nspan} {self.sspace}\n"
         section_str+=f"AFIL 0.0.1.0\n{self.aerofoil}\n"

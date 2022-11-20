@@ -1,11 +1,9 @@
-/__pycache__
-/AVL_automation/generated planes
-/AVL_automation/cases
-/AVL_automation/results
-/AVL_automation/avl.exe
-/AVL_automation/NACA_0012H.dat
-/AVL_automation/NACA_2412.dat
-/AVL_automation/__pycache__
-/build
-/dist
-/legacy
+__pycache__
+AVL-automation/generated planes/
+AVL-automation/cases/
+AVL-automation/results/
+AVL-automation/avl.exe
+AVL-automation/NACA_0012H.dat
+AVL-automation/NACA_2412.dat
+AVL-automation/__pycache__/
+legacy

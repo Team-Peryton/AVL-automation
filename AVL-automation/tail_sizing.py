@@ -137,7 +137,7 @@ class AutoTail():
                     exit()
 
                 tip=Section(Lt,span/2,0,chord,10,-2,self.elevator_aerofoil)    #   Defines tip section (object)
-                mod_str=root.string()+tip.string()  #   Combines 2 sections to insert into reference plane
+                mod_str=str(root)+str(tip)  #   Combines 2 sections to insert into reference plane
 
                 for index,line in enumerate(mod_geom):
                     if line=="MARKER\n":
