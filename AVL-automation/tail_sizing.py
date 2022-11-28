@@ -131,7 +131,7 @@ class AutoTail():
                 if self.config==0 and self.b_th=="-":                
                     root=Section(Lt,0,0,chord,10,-1,self.elevator_aerofoil)    #   Defines root section (object)
                 elif self.config==1:          
-                    root=Section(Lt,0,plane.Zle,chord,10,-1,self.elevator_aerofoil)
+                    root=Section(Lt,0,Zle,chord,10,-1,self.elevator_aerofoil)
                 else:
                     print("\nInvalid configuration selected.")
                     exit()
