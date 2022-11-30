@@ -26,12 +26,12 @@ ANGLE
 SECTION                                                     |  (keyword)
  373.2470    0.0000    0.0000  312.0000   0.000   19    -2   | Xle Yle Zle   Chord Ainc   [ Nspan Sspace ]
 AFIL 0.0 1.0
-NACA 2412.dat
+example_wing_aerofoil.dat
 
 SECTION                                                     |  (keyword)
  373.2470 1250.0000    0.0000  312.0000   0.000   19    -2   | Xle Yle Zle   Chord Ainc   [ Nspan Sspace ]
 AFIL 0.0 1.0
-NACA 2412.dat
+example_wing_aerofoil.dat
 
 #########################################
 
@@ -54,12 +54,12 @@ ANGLE
 SECTION                                                     |  (keyword)
 1556.2570    0.0000    0.0000  150.0000   0.000    7    -2   | Xle Yle Zle   Chord Ainc   [ Nspan Sspace ]
 AFIL 0.0 1.0
-NACA 0012H.dat
+example_tail_aerofoil.dat
 
 SECTION                                                     |  (keyword)
 1556.2570  390.0000    0.0000  150.0000   0.000    7    -2   | Xle Yle Zle   Chord Ainc   [ Nspan Sspace ]
 AFIL 0.0 1.0
-NACA 0012H.dat
+example_tail_aerofoil.dat
 
 #########################################
 
@@ -80,9 +80,9 @@ ANGLE
 SECTION                                                     |  (keyword)
 1506.2410   -0.0000  350.0000  200.0000   0.000    7    2   | Xle Yle Zle   Chord Ainc   [ Nspan Sspace ]
 AFIL 0.0 1.0
-NACA 0012H.dat
+example_tail_aerofoil.dat
 
 SECTION                                                     |  (keyword)
 1506.2410    0.0000    0.0000  200.0000   0.000    7    2   | Xle Yle Zle   Chord Ainc   [ Nspan Sspace ]
 AFIL 0.0 1.0
-NACA 0012H.dat
+example_tail_aerofoil.dat
