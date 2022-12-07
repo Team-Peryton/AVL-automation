@@ -82,8 +82,14 @@ class AutoTail():
     def generate_planes(self):
         self.ref_plane=Plane(name="REF")
         self.ref_plane.read(self.plane_file)
-        self.ref_plane.strip_section("Elevator")
-        self.ref_plane.strip_surface("Fin")
+        try:
+            self.ref_plane.strip_section("Elevator")
+        except KeyError:
+            print("\u001b[33m[Warning]\u001b[0m No section 'Elevator' found. Check geometry of generated planes looks correct.")
+        try:
+            self.ref_plane.strip_surface("Fin")
+        except KeyError:
+            print("\u001b[33m[Warning]\u001b[0m No surface 'Fin' found. Check geometry of generated planes looks correct.")
 
         planes=[]
 
@@ -106,6 +112,7 @@ class AutoTail():
                 
                 plane.Lt=round(Lt,0)
                 plane.St_h=St_h
+                plane.St_v=self.St_v
                 plane.mac=mac
                 plane.sm_ideal=self.sm_ideal
                 plane.tail_config=self.config
@@ -116,13 +123,13 @@ class AutoTail():
                 mod_geom=copy.copy(self.ref_plane.file_str)
 
                 if self.b_th!="-":   #   if span constraint used:
-                    chord=round((St_h*1000**2)/self.b_th,3)    #   Calculate chord based off span & area, not area & AR
+                    chord=round((St_h**2)/self.b_th,3)    #   Calculate chord based off span & area, not area & AR
                     span=self.b_th
                 else:
-                    chord=round(np.sqrt(St_h/ARt)*1000,3)     #   Calculates h chord based on area & AR
-                    span=round(np.sqrt(St_h*ARt)*1000,3)      #   Calculates HTP span (mm)
+                    chord=round(np.sqrt(St_h/ARt),3)     #   Calculates h chord based on area & AR
+                    span=round(np.sqrt(St_h*ARt),3)      #   Calculates HTP span (mm)
 
-                Zle=round((self.St_v*(1000**2))/(2*chord),3)         #   Calculates tip height (inverted v tail) (mm)
+                Zle=round((self.St_v)/(2*chord),3)         #   Calculates tip height (inverted v tail) (mm)
                 plane.theta=round(np.rad2deg(np.arctan(Zle/(span/2))))
 
                 plane.b_th=round(span,0)
@@ -153,7 +160,7 @@ class AutoTail():
 
                 planes.append(plane)
 
-        print("Planes generated.")
+        print("[Info] Planes generated.")
         self.planes=planes
 
         return planes
@@ -196,7 +203,7 @@ class AutoTail():
 
         return None
 
-    def results(self):
+    def results(self,display=True)->pd.DataFrame:
         """
         Plots results
         """
@@ -210,47 +217,51 @@ class AutoTail():
             z=[plane.sm for plane in self.planes]
 
             ax.scatter(x,y,z,c=z)
-            ax.set_xlabel("${St_h}$ (${m^2}$)")
-            ax.set_ylabel("Lt (mm)")
+            ax.set_xlabel("${St_h}$ (${Luinit^2}$)")
+            ax.set_ylabel("Lt")
             ax.set_zlabel("SM")
     
-            columns=["Plane ID","Static Margin","Xnp (mm)","Xt (mm)","Span (mm)","Chord (mm)","Angle (deg)"]
+            columns=["Plane ID","Static Margin","Xnp","Xt","Span","Chord","Angle (deg)","Sh","Sv"]
             solutions=[]
             for plane in self.planes:
                 if np.isclose(plane.sm,plane.sm_ideal,rtol=self.tolerance)==True:
-                    solutions.append([plane.name.split("-")[0],plane.sm,plane.np,plane.Lt,plane.b_th,plane.c_t,plane.theta])
+                    solutions.append([plane.name.split("-")[0],plane.sm,plane.np,plane.Lt,plane.b_th,plane.c_t,plane.theta,plane.St_h,plane.St_v])
             
             solutions_df=pd.DataFrame(solutions,columns=columns)
             if self.config==0:
-                solutions_df=solutions_df[["Plane ID","Static Margin","Xnp (mm)","Xt (mm)","Span (mm)","Chord (mm)"]]
-                solutions_df.rename(columns={"Span (mm)": "H Span (mm)","Chord (mm)":"H Chord (mm)"})
+                solutions_df=solutions_df[["Plane ID","Static Margin","Xnp","Xt","Sh","Sv"]]
+                #solutions_df.rename(columns={"Span": "H Span","Chord":"H Chord"})
       
             if len(solutions)==1:
-                print("\nNo ideal configurations possible. Consider changing limits.")
+                print("\n\u001b[33m[33m[Warning]\u001b[0m No ideal configurations possible. Consider changing limits.")
             else:
-                print("\nPossible configurations:\n")
-                print(solutions_df)
-                print("\nConsider refining limits around possible configurations.\n")
+                if display==True:
+                    print("\nPossible configurations:\n")
+                    print(solutions_df)
+                    print("\nConsider refining limits around possible configurations.\n")
 
-            plt.show()
+            if display==True:
+                plt.show()
 
         elif self.calc_cg==True:
             z=[plane.np for plane in self.planes]
 
             ax.scatter(x,y,z,c=z)
-            ax.set_xlabel("St_h (m^2)")
-            ax.set_ylabel("Lt (m)")
+            ax.set_xlabel("St_h (Lunit^2)")
+            ax.set_ylabel("Lt")
             ax.set_zlabel(f"Xcg for SM={self.planes[0].sm_ideal}")
 
-            columns=["Plane ID","Xcg (mm)","np (mm)","Static Margin"]
+            columns=["Plane ID","Xcg","np","Static Margin"]
             solutions=[]
             for plane in self.planes:
                 solutions.append([plane.name.split("-")[0],plane.Xcg,plane.np,self.sm_ideal])
 
             solutions_df=pd.DataFrame(solutions,columns=columns)
-            print("\n",solutions_df)
 
-        return None
+            if display==True:
+                print("\n",solutions_df)
+
+        return solutions_df
 
 if __name__=="__main__":
     tail=AutoTail("tail.config")

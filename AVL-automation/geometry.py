@@ -112,6 +112,18 @@ class Plane():
         self.file_str=stripped_str
 
         if found==False:
+            stripped_str.append(f"""\nSURFACE
+{section_name}
+13 1.0
+INDEX
+937
+YDUPLICATE
+0.0
+SCALE
+1.0 1.0 1.0
+TRANSLATE
+0.0 0.0 0.0\n""")
+            stripped_str.append("MARKER\n")
             raise KeyError(f"Section '{section_name}' not found.")
 
         return None

@@ -26,7 +26,7 @@ def avl_cmd(cmd_str:str)->None:
     return None
 
 class Case():
-    def __init__(self,Xcg,Ycg,Zcg,mass,Ixx=None,Iyy=None,Izz=None,velocity=None,alpha=None,modes=False,polars=False,id=False):
+    def __init__(self,Xcg,Ycg,Zcg,mass,Ixx=None,Iyy=None,Izz=None,velocity=None,density=None,alpha=None,modes=False,polars=False,id=False):
         """
         Most of these class inits were written when I didn't fully understand what they were for lol
         """
@@ -39,6 +39,7 @@ class Case():
         self.Izz=Izz
         self.mass=mass
         self.velocity=velocity
+        self.density=density
         self.alpha=alpha
         self.case_file=None
         self.Cl=None
@@ -67,7 +68,7 @@ class Case():
         case_str += f"Iyy={self.Iyy} kg-m^2\n"
         case_str += f"Izz={self.Izz} kg-m^2\n"
         case_str += f"velocity={self.velocity} m/s\n"
-        case_str += "density=1.225 kg-m^3\n"
+        case_str += f"density={self.density} kg-m^3\n"
         case_str += "grav.acc.=0.98 m/s^2\n"
 
         path=f"cases/{str(self.alpha)}deg.case"
@@ -128,6 +129,7 @@ class Aero():
                 Izz=self.Izz,
                 mass=self.mass,
                 velocity=self.velocity,
+                density=self.density,
                 alpha=alpha,
                 modes=self.modes,
                 polars=self.polars
@@ -163,12 +165,13 @@ class Aero():
             self.Iyy        = float(lines[5].split()[1])
             self.Izz        = float(lines[6].split()[1])
             self.velocity   = float(lines[7].split()[1])
-            self.alpha0     = float(lines[8].split()[1])
-            self.alpha1     = float(lines[9].split()[1])
-            self.increment  = float(lines[10].split()[1])
-            self.threads    = int(lines[11].split()[1])
-            self.polars     = str_to_bool(lines[12].split()[1])
-            self.modes      = str_to_bool(lines[13].split()[1])
+            self.density    = float(lines[8].split()[1])
+            self.alpha0     = float(lines[9].split()[1])
+            self.alpha1     = float(lines[10].split()[1])
+            self.increment  = float(lines[11].split()[1])
+            self.threads    = int(lines[12].split()[1])
+            self.polars     = str_to_bool(lines[13].split()[1])
+            self.modes      = str_to_bool(lines[14].split()[1])
         except IndexError:
             print("Parameters must have a value assigned.")
             exit()
