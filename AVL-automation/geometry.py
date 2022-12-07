@@ -1,3 +1,7 @@
+class KeyErrorMessage(str):
+    def __repr__(self): return str(self)
+
+
 class Plane():
     def __init__(self,name:str=None,geom_file=None):
 
@@ -8,11 +12,15 @@ class Plane():
         self.np=None
         self.sm=None
         self.sm_ideal=None
+        self.Xt=None
         self.Lt=None
+        self.Sw=None
+        self.Ct_v=None
         self.St_h=None  #   Equivilent horizontal tail area
         self.St_v=None  #   Equivilent vertical tail area
         self.mac=None
-        self.ARt=None
+        self.ARh=None
+        self.ARv=None
         self.span=None
         self.dihedral_angle=None
         self.dihedral_split=None
@@ -28,6 +36,8 @@ class Plane():
         self.b_tv=None
         self.c_t=None
         self.theta=None
+        self.Xw_root=None
+        self.Cw_root=None
 
         if self.name==None:
             self.name="plane"
@@ -70,11 +80,31 @@ class Plane():
         self.Xle=Xle
 
         ref_dims=[n for n in file_str][3]
+        self.Sw=float(ref_dims.split()[0])
         self.mac=float(ref_dims.split()[1])
         self.span=float(ref_dims.split()[2])
         self.ARw=self.span/self.mac
 
         self.file_str=file_str
+
+        ### Get wing LE x location
+        surface=False
+        section=False
+        found=False
+        for i,line in enumerate(self.file_str):
+            if line.strip()=="Main Wing":
+                found=True
+                surface=True
+            if line.split()[0]=="SECTION" and surface==True:
+                section=True
+                self.Xw_root=float(self.file_str[i+1].strip().split()[0])
+                self.Cw_root=float(self.file_str[i+1].strip().split()[3])
+
+                break
+
+        if found!=True:
+            msg=KeyErrorMessage("Wing surface not found. Wing should be defined by:\n\tSURFACE\n\tMain Wing\n\t...")
+            raise KeyError(msg)
 
         return None
 
