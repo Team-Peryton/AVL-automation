@@ -21,7 +21,7 @@ class Plane():
         self.mac=None
         self.ARh=None
         self.ARv=None
-        self.span=None
+        self.b_w=None
         self.dihedral_angle=None
         self.dihedral_split=None
         self.dihedral_splitY=None
@@ -82,8 +82,8 @@ class Plane():
         ref_dims=[n for n in file_str][3]
         self.Sw=float(ref_dims.split()[0])
         self.mac=float(ref_dims.split()[1])
-        self.span=float(ref_dims.split()[2])
-        self.ARw=self.span/self.mac
+        self.b_w=float(ref_dims.split()[2])
+        self.ARw=self.b_w/self.mac
 
         self.file_str=file_str
 
