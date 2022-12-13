@@ -221,21 +221,10 @@ class AutoTail():
         """
         Plots results
         """
-        fig=plt.figure()
-        ax=fig.add_subplot(projection='3d')
-
-        x=[plane.St_h for plane in self.planes]
-        y=[plane.Lt for plane in self.planes]
-
         if self.calc_cg==False:
-            z=[plane.sm for plane in self.planes]
-
-            ax.scatter(x,y,z,c=z)
-            ax.set_xlabel("${St_h}$ (${Lunit^2}$)")
-            ax.set_ylabel("${Lt}$ (${Lunit}$)")
-            ax.set_zlabel("SM")
     
-            columns=["Plane ID","Static Margin","Xnp (Lunit)","Xt (Lunit)","Lt (Lunit)","Span (Lunit)","Chord (Lunit)","Angle (deg)","Sh (Lunit^2)","Sv (Lunit^2)","ARh"]
+            columns=["Plane ID","Static Margin","Xnp (Lunit)","Xt (Lunit)","Lt (Lunit)",
+                    "Span (Lunit)","Chord (Lunit)","Angle (deg)","Sh (Lunit^2)","Sv (Lunit^2)","ARh"]
             solutions=[]
             for plane in self.planes:
                 if np.isclose(plane.sm,plane.sm_ideal,rtol=self.tolerance)==True:
@@ -256,7 +245,6 @@ class AutoTail():
             solutions_df=pd.DataFrame(solutions,columns=columns)
             if self.config==0:
                 solutions_df=solutions_df[["Plane ID","Static Margin","Xnp (Lunit)","Xt (Lunit)","Lt (Lunit)","Sh (Lunit^2)","Sv (Lunit^2)","ARh"]]
-                #solutions_df.rename(columns={"Span": "H Span","Chord":"H Chord"})
             
             if len(solutions)==0:
                 print("\n\u001b[33m[Warning]\u001b[0m No ideal configurations possible. Consider changing limits.")
@@ -267,15 +255,21 @@ class AutoTail():
                     print("\nConsider refining limits around possible configurations.\n")
 
             if display==True:
+                fig=plt.figure()
+                ax=fig.add_subplot(projection='3d')
+
+                x=[plane.St_h for plane in self.planes]
+                y=[plane.Lt for plane in self.planes]
+                z=[plane.sm for plane in self.planes]
+
+                ax.scatter(x,y,z,c=z)
+                ax.set_xlabel("${St_h}$ (${Lunit^2}$)")
+                ax.set_ylabel("${Lt}$ (${Lunit}$)")
+                ax.set_zlabel("SM")
+
                 plt.show()
 
         elif self.calc_cg==True:
-            z=[plane.np for plane in self.planes]
-
-            ax.scatter(x,y,z,c=z)
-            ax.set_xlabel("St_h (Lunit^2)")
-            ax.set_ylabel("Xt")
-            ax.set_zlabel(f"Xcg for SM={self.planes[0].sm_ideal}")
 
             columns=["Plane ID","Xcg (Lunit)","np (Lunit)","Static Margin"]
             solutions=[]
@@ -285,7 +279,21 @@ class AutoTail():
             solutions_df=pd.DataFrame(solutions,columns=columns)
 
             if display==True:
+                fig=plt.figure()
+                ax=fig.add_subplot(projection='3d')
+
+                x=[plane.St_h for plane in self.planes]
+                y=[plane.Lt for plane in self.planes]
+                z=[plane.np for plane in self.planes]
+
+                ax.scatter(x,y,z,c=z)
+                ax.set_xlabel("St_h (Lunit^2)")
+                ax.set_ylabel("Xt")
+                ax.set_zlabel(f"Xcg for SM={self.planes[0].sm_ideal}")
+                
                 print("\n",solutions_df)
+
+                plt.show()
 
         return solutions_df
 
