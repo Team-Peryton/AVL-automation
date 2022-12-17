@@ -1,12 +1,13 @@
 import os
 import shutil
 import numpy as np
+from matplotlib import cm
 from matplotlib import pyplot as plt
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 import copy
 import pandas as pd
-from scipy.optimize import curve_fit
+from scipy import optimize
 
 from geometry import Plane,Section
 from aero import Case,avl_cmd
@@ -221,20 +222,26 @@ class AutoTail():
             plane.calc_Xcg_ideal()
 
         return None
+    
+    def func(self,data:np.ndarray,a:float,b:float,c:float,d:float)->np.ndarray:
+        x=data[0]
+        y=data[1]
+        z=a*(x**b)*(y**c)+d
+        return z
 
-    def curve_fit(self,x,y,z):
+    def curve_fit(self,x:np.ndarray,y:np.ndarray,z:np.ndarray) ->np.ndarray:
 
-        def func(data,a,b,c,d):
-            x=data[0]
-            y=data[1]
-            z=a*(x**b)*(y**c)+d
-            return z
+        parameters, covariance = optimize.curve_fit(self.func,[x,y],z)
+
+        return parameters
+
+    def curve_fit_slice(self,x:list[float],y:list[float],z:list[float]) ->list[plt.figure,plt.axes]:
 
         def func_inv_const_z(x:np.ndarray,z:float,a:float,b:float,c:float,d:float) -> np.ndarray:
             y=np.exp((1/c)*np.log((z-d)/(a*x**b)))
             return y
-
-        parameters, covariance = curve_fit(func,[x,y],z)
+        
+        parameters=self.curve_fit(x,y,z)
         xs=np.linspace(self.St_h_lower,self.St_h_upper,100)
         ys=func_inv_const_z(xs,self.sm_ideal,*parameters)
 
@@ -259,6 +266,15 @@ class AutoTail():
 
         return fig,ax
         
+    def curve_fit_surface(self,x:list[float],y:list[float],z:list[float])->list[np.ndarray]:
+        parameters=self.curve_fit(x,y,z)
+
+        Lt_range=np.linspace(min(y),max(y),self.steps)
+
+        x2,y2=np.meshgrid(self.St_h_range,Lt_range)
+        z2=self.func(np.array((x2,y2)),*parameters)
+
+        return x2,y2,z2
 
     def results(self,display=True)->pd.DataFrame:
         """
@@ -302,7 +318,7 @@ class AutoTail():
             x=[plane.St_h for plane in self.planes]
             y=[plane.Lt for plane in self.planes]
             z=[plane.sm for plane in self.planes]
-            fig_cf,ax_ft=self.curve_fit(x,y,z)
+            fig_cf,ax_ft=self.curve_fit_slice(x,y,z)
 
             if len(solutions)==0:
                 print("\n\u001b[33m[Warning]\u001b[0m No ideal configurations possible. Consider changing limits.")
@@ -318,7 +334,11 @@ class AutoTail():
                 fig=plt.figure()
                 ax=fig.add_subplot(projection='3d')
 
-                ax.scatter(x,y,z,c=z)
+                x2,y2,z2=self.curve_fit_surface(x,y,z)
+                ax.plot_surface(x2,y2,z2,cmap=cm.jet)
+
+                ax.scatter(x,y,z,color='k',depthshade=False)
+
                 ax.set_xlabel("${St_h}$ (${Lunit^2}$)")
                 ax.set_ylabel("${Lt}$ (${Lunit}$)")
                 ax.set_zlabel("SM")
@@ -344,7 +364,8 @@ class AutoTail():
                 y=[plane.Lt for plane in self.planes]
                 z=[plane.np for plane in self.planes]
 
-                ax.scatter(x,y,z,c=z)
+                ax.scatter(x,y,z)
+
                 ax.set_xlabel("St_h (Lunit^2)")
                 ax.set_ylabel("Xt")
                 ax.set_zlabel(f"Xcg for SM={self.planes[0].sm_ideal}")
@@ -359,7 +380,7 @@ class AutoTail():
         return self.planes
 
 if __name__=="__main__":
-    tail=AutoTail("tail.config")
+    tail=AutoTail("projects/tail_MDDP_v0.config")
     tail.generate_planes()
     tail.run()
     tail.results()
