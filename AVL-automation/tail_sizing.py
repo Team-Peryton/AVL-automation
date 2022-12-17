@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 import copy
 import pandas as pd
+from scipy.optimize import curve_fit
 
 from geometry import Plane,Section
 from aero import Case,avl_cmd
@@ -82,6 +83,9 @@ class AutoTail():
         if self.config!=0 and self.config!=1:
             print("\u001b[31m[Error]\u001b[0m Invalid tail configuration selected.")
             exit()
+  
+        self.St_h_range=np.linspace(self.St_h_lower,self.St_h_upper,self.steps)
+        self.Xt_range=np.linspace(self.Xt_lower,self.Xt_upper,self.steps)
 
         return None
 
@@ -99,9 +103,6 @@ class AutoTail():
 
         planes=[]
 
-        St_h_range=np.linspace(self.St_h_lower,self.St_h_upper,self.steps)
-        Xt_range=np.linspace(self.Xt_lower,self.Xt_upper,self.steps)
-
         Sw=self.ref_plane.Sw
         mac=self.ref_plane.mac
         b_w=self.ref_plane.b_w
@@ -111,20 +112,20 @@ class AutoTail():
         Cw_root=self.ref_plane.Cw_root
 
         count=0
-        for St_h in St_h_range:
-            for Xt in Xt_range:
-                St_h=round(float(St_h),2)
-                Xt=round(Xt,2)
+        for St_h in self.St_h_range:
+            for Xt in self.Xt_range:
+                St_h=float(St_h)
+                Xt=Xt
 
                 name=str(count)  #   Creates plane name
                 plane=Plane(name=name)   #   Initializes new plane
                 
-                plane.Xt=round(Xt,0)
+                plane.Xt=Xt
                 plane.Sw=Sw
                 plane.Xw_root=Xw_root
                 plane.Cw_root=Cw_root
                 plane.St_h=St_h
-                plane.ARh=round(ARh,2)
+                plane.ARh=ARh
                 plane.mac=mac
                 plane.b_w=b_w
                 plane.sm_ideal=self.sm_ideal
@@ -137,20 +138,24 @@ class AutoTail():
                 mod_geom=copy.copy(self.ref_plane.file_str)
 
                 if self.b_th!="NA" and self.config==1:   #   if span constraint used:
-                    chord=round(St_h/self.b_th,3)    #   Calculate chord based off span & area, not area & AR
+                    chord=St_h/self.b_th    #   Calculate chord based off span & area, not area & AR
                     span=self.b_th
                 else:
-                    chord=round(np.sqrt(St_h/plane.ARh),3)     #   Calculates h chord based on area & AR
-                    span=round(np.sqrt(St_h*plane.ARh),3)      #   Calculates HTP span (Lunit)
+                    chord=np.sqrt(St_h/plane.ARh)     #   Calculates h chord based on area & AR
+                    span=np.sqrt(St_h*plane.ARh)      #   Calculates HTP span (Lunit)
 
-                plane.b_th=round(span,3)
-                plane.c_t=round(chord,3)
+                plane.b_th=span
+                plane.c_t=chord
 
-                plane.Lt=round((plane.Xt+plane.c_t*0.25)-(plane.Xw_root+0.25*plane.Cw_root),2)
-                plane.St_v=round(plane.Ct_v*plane.Sw*plane.b_w/plane.Lt,2)   #   Vertical tail sizing
+                plane.Lt=(plane.Xt+plane.c_t*0.25)-(plane.Xw_root+0.25*plane.Cw_root)
+                if plane.Lt<=0:
+                    print("\u001b[31m[Error]\u001b[0m Tail moment arm <=0. Increase Xt lower bound.")
+                    exit()
+
+                plane.St_v=plane.Ct_v*plane.Sw*plane.b_w/plane.Lt   #   Vertical tail sizing
                 
-                Zle=round((plane.St_v)/(2*chord),3)         #   Calculates tip height (inverted v tail) (Lunit)
-                plane.theta=round(np.rad2deg(np.arctan(Zle/(span/2))))
+                Zle=(plane.St_v)/(2*chord)         #   Calculates tip height (inverted v tail) (Lunit)
+                plane.theta=np.rad2deg(np.arctan(Zle/(span/2)))
 
                 if self.config==0:                
                     root=Section(Xt,0,0,chord,10,-1,self.elevator_aerofoil)    #   Defines root section (object)
@@ -217,17 +222,62 @@ class AutoTail():
 
         return None
 
+    def curve_fit(self,x,y,z):
+
+        def func(data,a,b,c,d):
+            x=data[0]
+            y=data[1]
+            z=a*(x**b)*(y**c)+d
+            return z
+
+        def func_inv_const_z(x:np.ndarray,z:float,a:float,b:float,c:float,d:float) -> np.ndarray:
+            y=np.exp((1/c)*np.log((z-d)/(a*x**b)))
+            return y
+
+        parameters, covariance = curve_fit(func,[x,y],z)
+        xs=np.linspace(self.St_h_lower,self.St_h_upper,100)
+        ys=func_inv_const_z(xs,self.sm_ideal,*parameters)
+
+        data=np.stack((x,y,z),axis=-1)
+        data_close=[]
+        for item in data:
+            if np.isclose(item[2],self.sm_ideal,atol=self.tolerance):
+                data_close.append(item)
+        data_close=np.array(data_close)
+
+        fig,ax=plt.subplots()
+        ax.plot(xs,ys,color='k',linestyle='--',
+            label=fr"$SM={round(self.sm_ideal*100,1)}$ (Curve Fit)"
+        )
+        ax.scatter(data_close[:,0],data_close[:,1],edgecolor='k',
+            facecolor='none',label=fr"$SM={round(self.sm_ideal*100,1)}%$ (Analysis Data)"
+        )
+
+        ax.set_xlabel(r"$St_h$ ($Lunit^2$)")
+        ax.set_ylabel(r"$Lt$ ($Lunit$)")
+        ax.legend()
+
+        return fig,ax
+        
+
     def results(self,display=True)->pd.DataFrame:
         """
         Plots results
         """
+        
+        # # for debugging
+        # import pickle as pkl
+        # with open("planes.pkl",'rb') as f:
+        #     self.planes=pkl.load(f)
+        # #
+
         if self.calc_cg==False:
     
             columns=["Plane ID","Static Margin","Xnp (Lunit)","Xt (Lunit)","Lt (Lunit)",
                     "Span (Lunit)","Chord (Lunit)","Angle (deg)","Sh (Lunit^2)","Sv (Lunit^2)","ARh"]
             solutions=[]
             for plane in self.planes:
-                if np.isclose(plane.sm,plane.sm_ideal,rtol=self.tolerance)==True:
+                if np.isclose(plane.sm,plane.sm_ideal,atol=self.tolerance)==True:
                     solutions.append([
                         plane.name.split("-")[0],
                         plane.sm,
@@ -243,9 +293,17 @@ class AutoTail():
                     ])
             
             solutions_df=pd.DataFrame(solutions,columns=columns)
+            solutions_df=solutions_df.round(2)
+
             if self.config==0:
                 solutions_df=solutions_df[["Plane ID","Static Margin","Xnp (Lunit)","Xt (Lunit)","Lt (Lunit)","Sh (Lunit^2)","Sv (Lunit^2)","ARh"]]
             
+            #### Curve fit to get exact solutions ####
+            x=[plane.St_h for plane in self.planes]
+            y=[plane.Lt for plane in self.planes]
+            z=[plane.sm for plane in self.planes]
+            fig_cf,ax_ft=self.curve_fit(x,y,z)
+
             if len(solutions)==0:
                 print("\n\u001b[33m[Warning]\u001b[0m No ideal configurations possible. Consider changing limits.")
             else:
@@ -255,18 +313,17 @@ class AutoTail():
                     print("\nConsider refining limits around possible configurations.\n")
 
             if display==True:
+                ##### Generated planes SM results (3D plot) #####
+
                 fig=plt.figure()
                 ax=fig.add_subplot(projection='3d')
-
-                x=[plane.St_h for plane in self.planes]
-                y=[plane.Lt for plane in self.planes]
-                z=[plane.sm for plane in self.planes]
 
                 ax.scatter(x,y,z,c=z)
                 ax.set_xlabel("${St_h}$ (${Lunit^2}$)")
                 ax.set_ylabel("${Lt}$ (${Lunit}$)")
                 ax.set_zlabel("SM")
 
+                fig.tight_layout()
                 plt.show()
 
         elif self.calc_cg==True:
@@ -277,6 +334,7 @@ class AutoTail():
                 solutions.append([plane.name.split("-")[0],plane.Xcg,plane.np,self.sm_ideal])
 
             solutions_df=pd.DataFrame(solutions,columns=columns)
+            solutions_df=solutions_df.round(2)
 
             if display==True:
                 fig=plt.figure()
