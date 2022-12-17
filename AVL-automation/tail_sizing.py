@@ -48,8 +48,8 @@ class AutoTail():
         self.Zcg                = lines[6].split()[1]
         self.mass               = float(lines[7].split()[1])
 
-        self.Lt_upper           = float(lines[8].split()[1])
-        self.Lt_lower           = float(lines[9].split()[1])
+        self.Xt_upper           = float(lines[8].split()[1])
+        self.Xt_lower           = float(lines[9].split()[1])
         self.St_h_upper         = float(lines[10].split()[1])
         self.St_h_lower         = float(lines[11].split()[1])
         self.Ct_v               = float(lines[12].split()[1])
@@ -66,7 +66,7 @@ class AutoTail():
             self.b_th=float(self.b_th)
 
 
-        if self.Lt_lower==0 or self.St_h_lower==0:
+        if self.Xt_lower==0 or self.St_h_lower==0:
             print("\u001b[31m[Error]\u001b[0m Input non-zero lower bound.")
             exit()
         
@@ -100,7 +100,7 @@ class AutoTail():
         planes=[]
 
         St_h_range=np.linspace(self.St_h_lower,self.St_h_upper,self.steps)
-        Lt_range=np.linspace(self.Lt_lower,self.Lt_upper,self.steps)
+        Xt_range=np.linspace(self.Xt_lower,self.Xt_upper,self.steps)
 
         Sw=self.ref_plane.Sw
         mac=self.ref_plane.mac
@@ -112,7 +112,7 @@ class AutoTail():
 
         count=0
         for St_h in St_h_range:
-            for Xt in Lt_range:
+            for Xt in Xt_range:
                 St_h=round(float(St_h),2)
                 Xt=round(Xt,2)
 
@@ -143,8 +143,8 @@ class AutoTail():
                     chord=round(np.sqrt(St_h/plane.ARh),3)     #   Calculates h chord based on area & AR
                     span=round(np.sqrt(St_h*plane.ARh),3)      #   Calculates HTP span (Lunit)
 
-                plane.b_th=round(span,0)
-                plane.c_t=round(chord,0)
+                plane.b_th=round(span,3)
+                plane.c_t=round(chord,3)
 
                 plane.Lt=round((plane.Xt+plane.c_t*0.25)-(plane.Xw_root+0.25*plane.Cw_root),2)
                 plane.St_v=round(plane.Ct_v*plane.Sw*plane.b_w/plane.Lt,2)   #   Vertical tail sizing
@@ -296,6 +296,9 @@ class AutoTail():
                 plt.show()
 
         return solutions_df
+
+    def get_planes(self) -> list[Plane]:
+        return self.planes
 
 if __name__=="__main__":
     tail=AutoTail("tail.config")

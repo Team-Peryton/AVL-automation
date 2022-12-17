@@ -21,7 +21,6 @@ class Plane():
         self.mac=None
         self.ARh=None
         self.ARv=None
-        self.b_w=None
         self.dihedral_angle=None
         self.dihedral_split=None
         self.dihedral_splitY=None
@@ -32,6 +31,7 @@ class Plane():
         self.polars=None
         self.modes=None
         self.tail_config=None
+        self.b_w=None
         self.b_th=None
         self.b_tv=None
         self.c_t=None
@@ -203,7 +203,7 @@ TRANSLATE
         with open(self.results_file,'r') as text:
             lines=text.readlines()[50]
 
-        self.np=round(float(lines.split()[-1]),1)
+        self.np=round(float(lines.split()[-1]),2)
         self.sm=round((self.np-self.Xcg)/self.mac,2)
 
         return self.sm
@@ -219,8 +219,8 @@ TRANSLATE
         with open(self.results_file,'r') as text:
             lines=text.readlines()[50]
 
-        self.np=round(float(lines.split()[-1]),1)
-        self.Xcg=round(self.np-(self.mac*self.sm_ideal),1)
+        self.np=round(float(lines.split()[-1]),2)
+        self.Xcg=round(self.np-(self.mac*self.sm_ideal),2)
 
         return self.Xcg
 
