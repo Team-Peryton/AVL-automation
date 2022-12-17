@@ -203,8 +203,8 @@ TRANSLATE
         with open(self.results_file,'r') as text:
             lines=text.readlines()[50]
 
-        self.np=round(float(lines.split()[-1]),2)
-        self.sm=round((self.np-self.Xcg)/self.mac,2)
+        self.np=float(lines.split()[-1])
+        self.sm=(self.np-self.Xcg)/self.mac
 
         return self.sm
 
@@ -219,8 +219,8 @@ TRANSLATE
         with open(self.results_file,'r') as text:
             lines=text.readlines()[50]
 
-        self.np=round(float(lines.split()[-1]),2)
-        self.Xcg=round(self.np-(self.mac*self.sm_ideal),2)
+        self.np=float(lines.split()[-1])
+        self.Xcg=self.np-(self.mac*self.sm_ideal)
 
         return self.Xcg
 
