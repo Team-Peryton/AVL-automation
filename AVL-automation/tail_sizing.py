@@ -55,14 +55,14 @@ class AutoTail():
         self.St_h_upper         = float(lines[10].split()[1])
         self.St_h_lower         = float(lines[11].split()[1])
         self.Ct_v               = float(lines[12].split()[1])
-        self.steps              = int(lines[13].split()[1])
+        self.steps              = 7
 
-        self.sm_ideal           = float(lines[14].split()[1])
-        self.tolerance          = float(lines[15].split()[1])
-        self.config             = float(lines[16].split()[1])
-        self.b_th               = lines[17].split()[1]
+        self.sm_ideal           = float(lines[13].split()[1])
+        self.tolerance          = float(lines[14].split()[1])
+        self.config             = float(lines[15].split()[1])
+        self.b_th               = lines[16].split()[1]
 
-        self.threads            = int(lines[18].split()[1])
+        self.threads            = int(lines[17].split()[1])
         
         if self.b_th!="NA":
             self.b_th=float(self.b_th)
@@ -104,9 +104,9 @@ class AutoTail():
 
         planes=[]
 
-        Sw=self.ref_plane.Sw
-        mac=self.ref_plane.mac
-        b_w=self.ref_plane.b_w
+        self.Sw=self.ref_plane.Sw
+        self.mac=self.ref_plane.mac
+        self.b_w=self.ref_plane.b_w
         ARw=self.ref_plane.ARw
         ARh=ARw*2/3
         Xw_root=self.ref_plane.Xw_root
@@ -122,13 +122,13 @@ class AutoTail():
                 plane=Plane(name=name)   #   Initializes new plane
                 
                 plane.Xt=Xt
-                plane.Sw=Sw
+                plane.Sw=self.Sw
                 plane.Xw_root=Xw_root
                 plane.Cw_root=Cw_root
                 plane.St_h=St_h
                 plane.ARh=ARh
-                plane.mac=mac
-                plane.b_w=b_w
+                plane.mac=self.mac
+                plane.b_w=self.b_w
                 plane.sm_ideal=self.sm_ideal
                 plane.tail_config=self.config
                 plane.Ct_v=self.Ct_v
@@ -235,43 +235,64 @@ class AutoTail():
 
         return parameters
 
-    def curve_fit_slice(self,x:list[float],y:list[float],z:list[float]) ->list[plt.figure,plt.axes]:
+    def curve_fit_slice(self,planes) ->list[plt.figure,plt.axes]:
+
+        St_hs=np.array([plane.St_h for plane in self.planes])
+        Lts=np.array([plane.Lt for plane in self.planes])
+        Xts=np.array([plane.Xt for plane in self.planes])
+        SMs=np.array([plane.sm for plane in self.planes])
 
         def func_inv_const_z(x:np.ndarray,z:float,a:float,b:float,c:float,d:float) -> np.ndarray:
             y=np.exp((1/c)*np.log((z-d)/(a*x**b)))
             return y
         
-        parameters=self.curve_fit(x,y,z)
-        xs=np.linspace(self.St_h_lower,self.St_h_upper,100)
-        ys=func_inv_const_z(xs,self.sm_ideal,*parameters)
+        parameters=self.curve_fit(St_hs,Lts,SMs)
+        St_h=np.linspace(self.St_h_lower,self.St_h_upper,100)
+        Lt=func_inv_const_z(St_h,self.sm_ideal,*parameters)
 
-        data=np.stack((x,y,z),axis=-1)
+        data=np.stack((St_hs,Lts,SMs),axis=-1)
         data_close=[]
         for item in data:
             if np.isclose(item[2],self.sm_ideal,atol=self.tolerance):
                 data_close.append(item)
         data_close=np.array(data_close)
 
+        St_v=self.Ct_v*self.Sw*self.b_w/Lt
+        #print(self.Ct_v*self.Sw*self.b_w/11.58)
+        #print(np.stack((St_h,0.9*self.mac*self.Sw/Lt),axis=-1))
+
         fig,ax=plt.subplots()
-        ax.plot(xs,ys,color='k',linestyle='--',
-            label=fr"$SM={round(self.sm_ideal*100,1)}$ (Curve Fit)"
-        )
-        ax.scatter(data_close[:,0],data_close[:,1],edgecolor='k',
-            facecolor='none',label=fr"$SM={round(self.sm_ideal*100,1)}%$ (Analysis Data)"
+
+        ax.plot(Lt,St_h,color='k',linestyle='-',
+            label=fr"Horizontal Tail"
         )
 
-        ax.set_xlabel(r"$St_h$ ($Lunit^2$)")
-        ax.set_ylabel(r"$Lt$ ($Lunit$)")
+        ax.plot(Lt,St_v,color='k',linestyle='--',
+            label=fr"Vertical Tail"
+        )
+
+        ax.set_ylabel(r"$St$ ($Lunit^2$)")
+        ax.set_xlabel(r"$Lt$ ($Lunit$)")
         ax.legend()
+
+        def Lt_to_Xt(x):
+            return np.interp(x,Lts,Xts)
+        
+        def Xt_to_Lt(x):
+            return np.interp(x,Xts,Lts)
+
+        ax2=ax.secondary_xaxis('top',functions=(Lt_to_Xt,Xt_to_Lt))
+        ax2.set_xlabel(r"Xt ($Lunits$)")
 
         return fig,ax
         
     def curve_fit_surface(self,x:list[float],y:list[float],z:list[float])->list[np.ndarray]:
         parameters=self.curve_fit(x,y,z)
 
-        Lt_range=np.linspace(min(y),max(y),self.steps)
+        St_h_range=np.linspace(min(x),max(x),100)
+        Lt_range=np.linspace(min(y),max(y),100)
 
-        x2,y2=np.meshgrid(self.St_h_range,Lt_range)
+        x2,y2=np.meshgrid(St_h_range,Lt_range)
         z2=self.func(np.array((x2,y2)),*parameters)
 
         return x2,y2,z2
@@ -318,7 +339,7 @@ class AutoTail():
             x=[plane.St_h for plane in self.planes]
             y=[plane.Lt for plane in self.planes]
             z=[plane.sm for plane in self.planes]
-            fig_cf,ax_ft=self.curve_fit_slice(x,y,z)
+            fig_cf,ax_ft=self.curve_fit_slice(self.planes)
 
             if len(solutions)==0:
                 print("\n\u001b[33m[Warning]\u001b[0m No ideal configurations possible. Consider changing limits.")
