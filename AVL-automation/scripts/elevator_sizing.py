@@ -29,8 +29,8 @@ x_cg=11.86  # m
 x_mg=13.39       # main gear m
 z_mg=-2.761
 z_D=0
-#z_T=0.487   # m
-z_T=0
+z_T=1.487   # m
+#z_T=0
 z_cg=0.316
 
 Ry=0.34
