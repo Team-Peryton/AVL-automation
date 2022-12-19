@@ -12,6 +12,133 @@ from scipy import optimize
 from geometry import Plane,Section
 from aero import Case,avl_cmd
 
+class CurveFit():
+    def __init__(self,planes:list[Plane],sm_ideal:float):
+        self.planes=planes
+        self.sm_ideal=sm_ideal
+
+        self.Lts=np.array([plane.Lt for plane in self.planes])
+        self.Xts=np.array([plane.Xt for plane in self.planes])
+        self.SMs=np.array([plane.sm for plane in self.planes])
+        self.St_hs=np.array([plane.St_h for plane in self.planes])
+
+    def func(self,data:np.ndarray,a:float,b:float,c:float,d:float)->np.ndarray:
+        x=data[0]
+        y=data[1]
+        z=a*(x**b)*(y**c)+d
+        return z
+
+    def func_inv_const_z(self,x:np.ndarray,z:float,a:float,b:float,c:float,d:float) -> np.ndarray:
+        y=np.exp((1/c)*np.log((z-d)/(a*x**b)))
+        return y
+
+    def Lt_to_Xt(self,x):
+        return np.interp(x,self.Lts,self.Xts)
+    
+    def Xt_to_Lt(self,x):
+        return np.interp(x,self.Xts,self.Lts)
+
+    def curve_fit(self,x:np.ndarray,y:np.ndarray,z:np.ndarray) ->np.ndarray:
+
+        parameters, covariance = optimize.curve_fit(self.func,[x,y],z)
+
+        return parameters
+
+    def curve_fit_slice(self) ->list[plt.figure,plt.axes]:
+        """
+        Slices surface fit to AVL datapoints.
+
+        Returns:
+            Lt: {np.ndarray} -- Tail moment arm
+            St_h: {np.ndarray} -- Horizontal tail area
+            St_v: {np.array} -- Vertical tail area
+
+        """
+
+        Lts=self.Lts
+        SMs=self.SMs
+        St_hs=self.St_hs
+
+        parameters=self.curve_fit(St_hs,Lts,SMs)
+
+        St_h=np.linspace(St_hs.min(),St_hs.max(),20)
+        Lt=self.func_inv_const_z(St_h,self.sm_ideal,*parameters)
+        St_v=self.planes[0].Ct_v*self.planes[0].Sw*self.planes[0].b_w/Lt
+
+        return Lt,St_h,St_v
+        
+    def curve_fit_surface(self)->list[np.ndarray]:
+        
+        St_hs=[plane.St_h for plane in self.planes]
+        Lts=self.Lts
+        Sms=[plane.sm for plane in self.planes]
+        
+        parameters=self.curve_fit(self.Lts,self.St_hs,self.SMs)
+
+        St_h_range=np.linspace(min(self.St_hs),max(self.St_hs),20)
+        Lt_range=np.linspace(min(self.Lts),max(self.Lts),20)
+
+        x2,y2=np.meshgrid(Lt_range,St_h_range)
+        z2=self.func(np.array((x2,y2)),*parameters)
+
+        return x2,y2,z2
+
+    def plot_slice(self,Lt,St_h,St_v):
+        """
+        Plots slices.
+
+        Returns:
+            fig: {plt.figure}
+            ax1: {plt.axes}
+            ax2: {plt.axes}
+        """
+        fig,ax1=plt.subplots()
+        
+        ax1.plot(Lt,St_h,color='r',linestyle='-',
+            label=fr"Horizontal Tail"
+        )
+        ax1.plot(Lt,St_v,color='b',linestyle='-',
+            label=fr"Vertical Tail"
+        )
+
+        ax1.set_ylabel(r"$St$ ($Lunit^2$)")
+        ax1.set_xlabel(r"$Lt$ ($Lunit$)")
+        ax1.legend()
+
+        ax2=ax1.secondary_xaxis('top',functions=(self.Lt_to_Xt,self.Xt_to_Lt))
+        ax2.set_xlabel(r"Xt ($Lunits$)")
+
+        return fig,ax1,ax2
+    
+    def plot_surface(self,x,y,z):
+        fig=plt.figure()
+        ax=fig.add_subplot(projection='3d')
+
+        ax.plot_surface(x,y,z,cmap=cm.viridis)
+        ax.scatter(self.Lts,self.St_hs,self.SMs,color='k',depthshade=False)
+
+        ax.set_xlabel("${St_h}$ (${Lunit^2}$)")
+        ax.set_ylabel("${Lt}$ (${Lunit}$)")
+        ax.set_zlabel("SM")
+
+        fig.tight_layout()  
+
+        return plt
+
+    def plot_surface_contour(self,x,y,z):
+
+        fig,ax=plt.subplots()
+
+        cs=ax.contour(x,y,z,10,colors='k')
+        ax.clabel(cs,cs.levels,inline=True,colors='k')
+
+        ax.set_xlabel("${St_h}$ (${Lunit^2}$)")
+        ax.set_ylabel("${Lt}$ (${Lunit}$)")
+
+        fig.tight_layout()
+
+        return plt
+
 class AutoTail():
     def __init__(self,config_file:str): 
         path=os.path.abspath(os.getcwd())
@@ -222,82 +349,8 @@ class AutoTail():
             plane.calc_Xcg_ideal()
 
         return None
-    
-    def func(self,data:np.ndarray,a:float,b:float,c:float,d:float)->np.ndarray:
-        x=data[0]
-        y=data[1]
-        z=a*(x**b)*(y**c)+d
-        return z
 
-    def curve_fit(self,x:np.ndarray,y:np.ndarray,z:np.ndarray) ->np.ndarray:
-
-        parameters, covariance = optimize.curve_fit(self.func,[x,y],z)
-
-        return parameters
-
-    def curve_fit_slice(self,planes) ->list[plt.figure,plt.axes]:
-
-        St_hs=np.array([plane.St_h for plane in self.planes])
-        Lts=np.array([plane.Lt for plane in self.planes])
-        Xts=np.array([plane.Xt for plane in self.planes])
-        SMs=np.array([plane.sm for plane in self.planes])
-
-        def func_inv_const_z(x:np.ndarray,z:float,a:float,b:float,c:float,d:float) -> np.ndarray:
-            y=np.exp((1/c)*np.log((z-d)/(a*x**b)))
-            return y
-        
-        parameters=self.curve_fit(St_hs,Lts,SMs)
-        St_h=np.linspace(self.St_h_lower,self.St_h_upper,100)
-        Lt=func_inv_const_z(St_h,self.sm_ideal,*parameters)
-
-        data=np.stack((St_hs,Lts,SMs),axis=-1)
-        data_close=[]
-        for item in data:
-            if np.isclose(item[2],self.sm_ideal,atol=self.tolerance):
-                data_close.append(item)
-        data_close=np.array(data_close)
-
-        St_v=self.Ct_v*self.Sw*self.b_w/Lt
-        #print(self.Ct_v*self.Sw*self.b_w/11.58)
-        #print(np.stack((St_h,0.9*self.mac*self.Sw/Lt),axis=-1))
-
-        fig,ax=plt.subplots()
-
-        ax.plot(Lt,St_h,color='k',linestyle='-',
-            label=fr"Horizontal Tail"
-        )
-
-        ax.plot(Lt,St_v,color='k',linestyle='--',
-            label=fr"Vertical Tail"
-        )
-
-        ax.set_ylabel(r"$St$ ($Lunit^2$)")
-        ax.set_xlabel(r"$Lt$ ($Lunit$)")
-        ax.legend()
-
-        def Lt_to_Xt(x):
-            return np.interp(x,Lts,Xts)
-        
-        def Xt_to_Lt(x):
-            return np.interp(x,Xts,Lts)
-
-        ax2=ax.secondary_xaxis('top',functions=(Lt_to_Xt,Xt_to_Lt))
-        ax2.set_xlabel(r"Xt ($Lunits$)")
-
-        return fig,ax
-        
-    def curve_fit_surface(self,x:list[float],y:list[float],z:list[float])->list[np.ndarray]:
-        parameters=self.curve_fit(x,y,z)
-
-        St_h_range=np.linspace(min(x),max(x),100)
-        Lt_range=np.linspace(min(y),max(y),100)
-
-        x2,y2=np.meshgrid(St_h_range,Lt_range)
-        z2=self.func(np.array((x2,y2)),*parameters)
-
-        return x2,y2,z2
-
-    def results(self,display=True)->pd.DataFrame:
+    def results(self,display=True):
         """
         Plots results
         """
@@ -334,12 +387,6 @@ class AutoTail():
 
             if self.config==0:
                 solutions_df=solutions_df[["Plane ID","Static Margin","Xnp (Lunit)","Xt (Lunit)","Lt (Lunit)","Sh (Lunit^2)","Sv (Lunit^2)","ARh"]]
-            
-            #### Curve fit to get exact solutions ####
-            x=[plane.St_h for plane in self.planes]
-            y=[plane.Lt for plane in self.planes]
-            z=[plane.sm for plane in self.planes]
-            fig_cf,ax_ft=self.curve_fit_slice(self.planes)
 
             if len(solutions)==0:
                 print("\n\u001b[33m[Warning]\u001b[0m No ideal configurations possible. Consider changing limits.")
@@ -349,22 +396,17 @@ class AutoTail():
                     print(solutions_df)
                     print("\nConsider refining limits around possible configurations.\n")
 
+            curve_fit=CurveFit(self.planes,self.sm_ideal)
             if display==True:
                 ##### Generated planes SM results (3D plot) #####
+      
+                Lt,St_h,St_v=curve_fit.curve_fit_slice()
+                curve_fit.plot_slice(Lt,St_h,St_v)
 
-                fig=plt.figure()
-                ax=fig.add_subplot(projection='3d')
-
-                x2,y2,z2=self.curve_fit_surface(x,y,z)
-                ax.plot_surface(x2,y2,z2,cmap=cm.jet)
-
-                ax.scatter(x,y,z,color='k',depthshade=False)
-
-                ax.set_xlabel("${St_h}$ (${Lunit^2}$)")
-                ax.set_ylabel("${Lt}$ (${Lunit}$)")
-                ax.set_zlabel("SM")
-
-                fig.tight_layout()
+                x2,y2,z2=curve_fit.curve_fit_surface()
+                curve_fit.plot_surface(x2,y2,z2)
+                curve_fit.plot_surface_contour(x2,y2,z2)
+                
                 plt.show()
 
         elif self.calc_cg==True:
@@ -395,10 +437,13 @@ class AutoTail():
 
                 plt.show()
 
-        return solutions_df
+        return solutions_df,curve_fit
 
     def get_planes(self) -> list[Plane]:
         return self.planes
+
+    def get_curve_fit(self) -> CurveFit:
+        return CurveFit(self.planes)
 
 if __name__=="__main__":
     tail=AutoTail("projects/tail_MDDP_v0.config")
