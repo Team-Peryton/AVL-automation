@@ -23,6 +23,14 @@ class CurveFit():
         self.SMs = np.array([plane.sm for plane in self.planes])
         self.St_hs = np.array([plane.St_h for plane in self.planes])
 
+        if self.SMs.min() > sm_ideal or self.SMs.max() < sm_ideal:
+            print(
+                "\u001b[33m[Warning]\u001b[0m No stable configurations found. Consider changing limits.")
+
+            self.unstable = True
+        else:
+            self.unstable = False
+
     def func(self, data: np.ndarray, a: float, b: float, c: float, d: float) -> np.ndarray:
         """Equation for 3D surface (applicable to Lt, Sh, SM datapoints)
 
@@ -91,6 +99,10 @@ class CurveFit():
 
         """
 
+        if self.unstable == True:
+            print("\u001b[31m[Error]\u001b[0m SM ideal is out of range of analysis datapoints. Stable configurations are required to slice at SM ideal.")
+            exit()
+
         Lts = self.Lts
         SMs = self.SMs
         St_hs = self.St_hs
@@ -124,7 +136,7 @@ class CurveFit():
 
         return x2, y2, z2
 
-    def plot_slice(self, Lt, St_h, St_v):
+    def plot_slice(self, Lt: np.ndarray, St_h: np.ndarray, St_v: np.ndarray):
         """
         Plots slices.
 
@@ -133,7 +145,7 @@ class CurveFit():
             ax1: {plt.axes}
             ax2: {plt.axes}
         """
-        fig, ax1 = plt.subplots()
+        fig, ax1 = plt.subplots(figsize=(7, 7))
 
         ax1.plot(Lt, St_h, color='r', linestyle='-',
                  label=fr"Horizontal Tail"
@@ -144,11 +156,17 @@ class CurveFit():
 
         ax1.set_ylabel(r"$St$ ($Lunit^2$)")
         ax1.set_xlabel(r"$Lt$ ($Lunit$)")
+        if max((max(St_h), max(St_v))) > 1000:
+            print('hi')
+            ax1.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
         ax1.legend()
 
         ax2 = ax1.secondary_xaxis(
             'top', functions=(self.Lt_to_Xt, self.Xt_to_Lt))
         ax2.set_xlabel(r"Xt ($Lunits$)")
+
+        ax1.set_title(fr"Tail Configurations with $SM={self.sm_ideal}$")
+        # fig.tight_layout()
 
         return fig, ax1, ax2
 
@@ -195,6 +213,7 @@ class AutoTail():
         os.mkdir(path+"/results")
         os.mkdir(path+"/cases")
 
+        self.path = os.path.split(config_file)[0]
         self.read_config(config_file)
 
         return None
@@ -205,6 +224,7 @@ class AutoTail():
         Args:
             file (str): tail.config file path.
         """
+
         with open(file, 'r') as f:
             lines = [line for line in f.readlines()]
         lines = [line for line in lines if line[0] != "#" and line != "\n"]
@@ -215,10 +235,14 @@ class AutoTail():
             exit()
         lines = lines[1:]
 
-        self.plane_file = lines[0].split(": ")[1:][0].strip()
-        self.wing_aerofoil = lines[1].split(": ")[1:][0]
-        self.elevator_aerofoil = lines[2].split(": ")[1:][0]
-        self.fin_aerofoil = lines[3].split(": ")[1:][0]
+        self.plane_file = "".join(
+            (self.path, '/', lines[0].split(": ")[1:][0].strip()))
+        self.wing_aerofoil = "".join(
+            (self.path, '/', lines[1].split(": ")[1:][0]))
+        self.elevator_aerofoil = "".join(
+            (self.path, '/', lines[2].split(": ")[1:][0]))
+        self.fin_aerofoil = "".join(
+            (self.path, '/', lines[3].split(": ")[1:][0]))
 
         self.Xcg = lines[4].split()[1]
         self.Ycg = lines[5].split()[1]
@@ -245,8 +269,9 @@ class AutoTail():
             print(
                 "\u001b[31m[Error]\u001b[0m Input non-zero horizontal span constraint. (NA to ignore)")
             exit()
-        if self.b_th!="NA" and self.config==0:
-            print("\u001b[33m[Warning]\u001b[0m Span constraint will be ignored for conventional tails.")
+        if self.b_th != "NA" and self.config == 0:
+            print(
+                "\u001b[33m[Warning]\u001b[0m Span constraint will be ignored for conventional tails.")
 
         if self.Xt_lower == 0 or self.St_h_lower == 0:
             print("\u001b[31m[Error]\u001b[0m Input non-zero lower bound.")
@@ -420,7 +445,7 @@ class AutoTail():
         plane.results_file = "results/"+plane.name+".txt"
         cmd_str += plane.results_file+"\n"  # Saves results
 
-        avl_cmd(cmd_str)
+        avl_cmd(cmd_str, self.path)
 
     def calc_SM(self, tasks):
         """Calculates static margin for each plane.
@@ -473,28 +498,23 @@ class AutoTail():
                 solutions_df = solutions_df[[
                     "Plane ID", "Static Margin", "Xnp (Lunit)", "Xt (Lunit)", "Lt (Lunit)", "Sh (Lunit^2)", "Sv (Lunit^2)", "ARh"]]
 
-            if len(solutions) == 0:
-                print(
-                    "\n\u001b[33m[Warning]\u001b[0m No ideal configurations possible. Consider changing limits.")
-            else:
-                if display == True:
-                    print("\nPossible configurations:\n")
-                    print(solutions_df)
-                    print(
-                        "\nConsider refining limits around possible configurations.\n")
-
             curve_fit = CurveFit(self.planes, self.sm_ideal)
+            if curve_fit.unstable==False:
+                print(
+                    "\nConsider refining limits around possible configurations.\n")
+
             if display == True:
                 ##### Generated planes SM results (3D plot) #####
-
-                Lt, St_h, St_v = curve_fit.curve_fit_slice()
-                curve_fit.plot_slice(Lt, St_h, St_v)
-
                 x2, y2, z2 = curve_fit.curve_fit_surface()
                 curve_fit.plot_surface(x2, y2, z2)
-                # curve_fit.plot_surface_contour(x2,y2,z2)
+
+                if curve_fit.unstable==False:
+                    Lt, St_h, St_v = curve_fit.curve_fit_slice()
+                    curve_fit.plot_slice(Lt, St_h, St_v)
 
                 plt.show()
+
+            return solutions_df, curve_fit
 
         elif self.calc_cg == True:
 
@@ -526,7 +546,7 @@ class AutoTail():
 
                 plt.show()
 
-        return solutions_df, curve_fit
+            return solutions_df
 
 
 if __name__ == "__main__":

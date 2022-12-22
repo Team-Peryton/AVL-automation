@@ -7,9 +7,7 @@ import shutil
 
 from .geometry import Plane
 
-PATH=os.path.abspath(os.getcwd())
-
-def avl_cmd(cmd_str:str)->None:
+def avl_cmd(cmd_str:str,path:str)->None:
     """
     Opens AVL in a subprocess and submits command string.
 
@@ -18,7 +16,7 @@ def avl_cmd(cmd_str:str)->None:
     """
 
     avl_subprocess=sp.Popen(
-        [f"{PATH}/avl.exe"],
+        [f"{path}/avl.exe"],
         stdin=sp.PIPE,
         stdout=sp.PIPE,
         stderr=sp.PIPE
