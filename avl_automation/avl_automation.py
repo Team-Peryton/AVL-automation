@@ -1,14 +1,14 @@
-from aero import Aero
-from geometry import Plane
-from dihedral import Dihedral
-from tail_sizing import AutoTail
-
 import argparse
 import os
 
-if os.path.exists('avl.exe')==False:
-    print("\u001b[31m[Error]\u001b[0m avl.exe not found.")
-    exit()
+from .aero import Aero
+from .geometry import Plane
+from .dihedral import Dihedral
+from .tail import AutoTail
+
+# if os.path.exists('avl.exe')==False:
+#     print("\u001b[31m[Error]\u001b[0m avl.exe not found.")
+#     exit()
 
 parser=argparse.ArgumentParser(description="AVL Automation.")
 

@@ -1,11 +1,12 @@
-from aero import Aero
-from geometry import Plane,Section
 from matplotlib import pyplot as plt
 import numpy as np
 import os
 import shutil
 from tqdm import tqdm
 import copy
+
+from .aero import Aero
+from .geometry import Plane,Section
 
 class Dihedral():
     def __init__(self,dihedral_config_file:str,aero_config_file:str):
@@ -79,7 +80,7 @@ class Dihedral():
         planes=[]
 
         mac=self.ref_plane.mac
-        span=self.ref_plane.span
+        span=self.ref_plane.b_w
         hspan=span/2    #   Half span (AVL wings are defined from centreline to outboard.)
 
         count=0

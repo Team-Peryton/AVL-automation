@@ -5,7 +5,9 @@ import pandas as pd
 import os
 import shutil
 
-from geometry import Plane
+from .geometry import Plane
+
+PATH=os.path.abspath(os.getcwd())
 
 def avl_cmd(cmd_str:str)->None:
     """
@@ -14,8 +16,9 @@ def avl_cmd(cmd_str:str)->None:
     Arguments:
         cmd_str {string} -- Command string to be submitted to AVL. Essentially key presses.
     """
+
     avl_subprocess=sp.Popen(
-        ['avl.exe'],
+        [f"{PATH}/avl.exe"],
         stdin=sp.PIPE,
         stdout=sp.PIPE,
         stderr=sp.PIPE

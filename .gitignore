@@ -1,13 +1,12 @@
-__pycache__
-AVL-automation/generated planes/
-AVL-automation/cases/
-AVL-automation/results/
-AVL-automation/avl.exe
-AVL-automation/NACA_0012H.dat
-AVL-automation/NACA_2412.dat
-AVL-automation/__pycache__/
-legacy
-AVL-automation/env
-AVL-automation/projects
-AVL-automation/planes.pkl
-AVL-automation/test.py
+avl_automation/__pycache__
+avl_automation.egg-info
+dev_env
+env
+example/cases
+example/generated planes
+example/results
+projects
+scripts/__pycache__
+scripts/cases
+scripts/generated planes
+scripts/results
