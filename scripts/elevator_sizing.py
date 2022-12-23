@@ -2,7 +2,7 @@ import numpy as np
 from pandas import read_csv
 import matplotlib.pyplot as plt
 
-from avl_automation.tail import AutoTail
+from avlautomation.tail import AutoTail
 from plain_flap_chord import Iterate
 
 #### general parameters ####

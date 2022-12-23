@@ -4,7 +4,7 @@ from pandas import read_csv
 from tqdm import tqdm
 
 from plain_flap_chord import Iterate
-from avl_automation.tail import AutoTail
+from avlautomation.tail import AutoTail
 
 tail = AutoTail("../projects/tail_MDDP_v1.config")
 tail.generate_planes()

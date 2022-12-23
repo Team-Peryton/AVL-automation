@@ -452,7 +452,7 @@ class AutoTail():
 
         plane.results_file = f"{self.path}/results/"+plane.name+".txt"
         cmd_str += plane.results_file+"\n"  # Saves results
-
+        
         avl_cmd(cmd_str, self.path)
 
     def calc_SM(self, tasks):

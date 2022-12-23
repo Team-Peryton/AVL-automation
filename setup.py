@@ -6,7 +6,7 @@ LONG_DESCRIPTION = "Automatic tail sizing and dihedral angle investigation made 
 
 # setup
 setup(
-    name="avl_automation",
+    name="avlautomation",
     version=VERSION,
     author="jj-foster",
     description=DESCRIPTION,

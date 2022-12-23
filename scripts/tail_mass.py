@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-from avl_automation.tail import AutoTail
+from avlautomation.tail import AutoTail
 
 def calc_mass_v(HtHv: float, Wdg: float, Nz: float, Lt: float, Svt: float, Kz: float, delta_v: float, Av: float, tc: float) -> float:
     """_summary_

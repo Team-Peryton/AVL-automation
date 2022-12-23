@@ -102,15 +102,16 @@ class Case():
         return None 
 
 class Aero():
-    def __init__(self,config_file:str,path:str):
+    def __init__(self,config_file:str):
         #   Cleans temp folders.
-        self.path=os.path.abspath(os.getcwd())
-        if os.path.isdir(path+"/cases")==True:
-            shutil.rmtree(path+"/cases")
-        os.mkdir(path+"/cases")
-        if os.path.isdir(path+"/results")==True:
-            shutil.rmtree(path+"/results")
-        os.mkdir(path+"/results")
+        self.path = os.path.split(config_file)[0]
+
+        if os.path.isdir(self.path+"/cases")==True:
+            shutil.rmtree(self.path+"/cases")
+        os.mkdir(self.path+"/cases")
+        if os.path.isdir(self.path+"/results")==True:
+            shutil.rmtree(self.path+"/results")
+        os.mkdir(self.path+"/results")
 
         self.read_config(config_file)
 
@@ -123,6 +124,7 @@ class Aero():
         self.cases=[]
         for alpha in alpha_range:
             self.cases.append(Case( #   Creates case objects for range of alphas
+                path=self.path,
                 Xcg=self.Xcg,
                 Ycg=self.Ycg,
                 Zcg=self.Zcg,
@@ -242,7 +244,7 @@ class Aero():
             cmd_str+="oper\nx\nst\n"
             cmd_str+=f"{case.polars_results_file}\n"
 
-        avl_cmd(cmd_str)
+        avl_cmd(cmd_str,self.path)
 
         return None
 

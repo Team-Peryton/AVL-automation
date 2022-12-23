@@ -40,10 +40,10 @@ if args.run_type=='aero':
 
 if args.run_type=='tail':
     if args.config is None:
-        parser.error("Aero requires --config.")
+        parser.error("Tail requires --config.")
         
     if len(args.config)>1:
-        parser.error("Aero requires only 1 config file.")
+        parser.error("Tail requires only 1 config file.")
 
     if os.path.exists(args.config[0])==False:
         print(f"\u001b[31m[Error]\u001b[0m {args.config[0]} not found.")
@@ -56,10 +56,10 @@ if args.run_type=='tail':
 
 if args.run_type=='dihedral':
     if args.config is None:
-        parser.error("Aero requires --config.")
+        parser.error("Dihedral requires --config.")
     
     if len(args.config)!=2:
-        parser.error("Aero requires 2 config files: dihedral, aero.")
+        parser.error("Dihedral requires 2 config files: dihedral, aero.")
 
     for config in args.config:
         if os.path.exists(config)==False:
