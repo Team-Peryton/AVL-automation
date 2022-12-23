@@ -6,10 +6,6 @@ from .geometry import Plane
 from .dihedral import Dihedral
 from .tail import AutoTail
 
-# if os.path.exists('avl.exe')==False:
-#     print("\u001b[31m[Error]\u001b[0m avl.exe not found.")
-#     exit()
-
 parser=argparse.ArgumentParser(description="AVL Automation.")
 
 parser.add_argument('run_type',choices=['aero','tail','dihedral'],help='Type of analysis to run.')

@@ -65,7 +65,7 @@ class CurveFit():
         """
         y = np.exp((1/c)*np.log((z-d)/(a*x**b)))
         return y
-
+    
     def Lt_to_Xt(self, x):
         return np.interp(x, self.Lts, self.Xts)
 
@@ -157,7 +157,6 @@ class CurveFit():
         ax1.set_ylabel(r"$St$ ($Lunit^2$)")
         ax1.set_xlabel(r"$Lt$ ($Lunit$)")
         if max((max(St_h), max(St_v))) > 1000:
-            print('hi')
             ax1.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
         ax1.legend()
 
@@ -202,18 +201,27 @@ class CurveFit():
 
 class AutoTail():
     def __init__(self, config_file: str):
-        path = os.path.abspath(os.getcwd())
-        if os.path.isdir(path+"/results") == True:
-            shutil.rmtree(path+"/results")
-        if os.path.isdir(path+"/generated planes") == True:
-            shutil.rmtree(path+"/generated planes")
-        if os.path.isdir(path+"/cases") == True:
-            shutil.rmtree(path+"/cases")
-        os.mkdir(path+"/generated planes")
-        os.mkdir(path+"/results")
-        os.mkdir(path+"/cases")
-
+        
         self.path = os.path.split(config_file)[0]
+        
+        try:
+            if os.path.isdir(self.path+"/results") == True:
+                shutil.rmtree(self.path+"/results")
+            if os.path.isdir(self.path+"/generated planes") == True:
+                shutil.rmtree(self.path+"/generated planes")
+            if os.path.isdir(self.path+"/cases") == True:
+                shutil.rmtree(self.path+"/cases")
+        except PermissionError:
+            raise PermissionError("Close all results, geometry, case files")
+
+        os.mkdir(self.path+"/generated planes")
+        os.mkdir(self.path+"/results")
+        os.mkdir(self.path+"/cases")
+        
+        if os.path.exists(f"{self.path}/avl.exe")==False:
+            print("\u001b[31m[Error]\u001b[0m avl.exe not found.")
+            exit()
+
         self.read_config(config_file)
 
         return None
@@ -395,8 +403,8 @@ class AutoTail():
                         # Inserts modified sections
                         mod_geom.insert(index, mod_str)
 
-                file_name = f"{plane.name}-{str(St_h)}{St_h}-{str(Xt)}Xt"
-                plane.geom_file = f"generated planes/{file_name}.avl"
+                file_name = f"{plane.name}-{str(round(St_h,2))}Sh-{str(round(plane.Lt,2))}Lt"
+                plane.geom_file = f"{self.path}/generated planes/{file_name}.avl"
 
                 with open(plane.geom_file, 'w') as file:
                     file.write("".join(mod_geom))
@@ -412,7 +420,7 @@ class AutoTail():
     def run(self):
         """Runs AVL stability analysis. Multithreaded due to high io throughput.
         """
-        self.case = Case(self.Xcg, self.Ycg, self.Zcg, self.mass)
+        self.case = Case(self.path,self.Xcg, self.Ycg, self.Zcg, self.mass)
         self.case.write_stab_case()
 
         tasks = [(self.case, plane) for plane in self.planes]
@@ -442,7 +450,7 @@ class AutoTail():
         cmd_str += "oper\n x\n"  # Run analysis
         cmd_str += "st\n"  # View stability derivatives
 
-        plane.results_file = "results/"+plane.name+".txt"
+        plane.results_file = f"{self.path}/results/"+plane.name+".txt"
         cmd_str += plane.results_file+"\n"  # Saves results
 
         avl_cmd(cmd_str, self.path)
@@ -501,7 +509,9 @@ class AutoTail():
             curve_fit = CurveFit(self.planes, self.sm_ideal)
             if curve_fit.unstable==False:
                 print(
-                    "\nConsider refining limits around possible configurations.\n")
+                    "Consider refining limits around possible configurations.\n")
+            print(self.planes[0].mac)
+            print(f"np: {self.Xcg-(self.planes[0].mac*self.sm_ideal)}")
 
             if display == True:
                 ##### Generated planes SM results (3D plot) #####
@@ -511,6 +521,7 @@ class AutoTail():
                 if curve_fit.unstable==False:
                     Lt, St_h, St_v = curve_fit.curve_fit_slice()
                     curve_fit.plot_slice(Lt, St_h, St_v)
+
 
                 plt.show()
 

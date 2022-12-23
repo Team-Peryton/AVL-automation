@@ -27,11 +27,12 @@ def avl_cmd(cmd_str:str,path:str)->None:
     return None
 
 class Case():
-    def __init__(self,Xcg,Ycg,Zcg,mass,Ixx=None,Iyy=None,Izz=None,velocity=None,density=None,alpha=None,modes=False,polars=False,id=False):
+    def __init__(self,path,Xcg,Ycg,Zcg,mass,Ixx=None,Iyy=None,Izz=None,velocity=None,density=None,alpha=None,modes=False,polars=False,id=False):
         """
         Most of these class inits were written when I didn't fully understand what they were for lol
         """
         
+        self.path=path
         self.Xcg=Xcg
         self.Ycg=Ycg
         self.Zcg=Zcg
@@ -72,7 +73,7 @@ class Case():
         case_str += f"density={self.density} kg-m^3\n"
         case_str += "grav.acc.=0.98 m/s^2\n"
 
-        path=f"cases/{str(self.alpha)}deg.case"
+        path=f"{self.path}/cases/{str(self.alpha)}deg.case"
 
         with open(path,'w') as f:
             f.write(case_str)
@@ -92,7 +93,7 @@ class Case():
         case_str += f"Z_cg={self.Zcg} Lunit\n"
         case_str += f"mass={self.mass} kg\n"
 
-        path="cases/tail.case"
+        path=f"{self.path}/cases/tail.case"
         with open(path,'w') as file:    #   Saves case file
             file.write(case_str)
 
@@ -101,9 +102,9 @@ class Case():
         return None 
 
 class Aero():
-    def __init__(self,config_file:str):
+    def __init__(self,config_file:str,path:str):
         #   Cleans temp folders.
-        path=os.path.abspath(os.getcwd())
+        self.path=os.path.abspath(os.getcwd())
         if os.path.isdir(path+"/cases")==True:
             shutil.rmtree(path+"/cases")
         os.mkdir(path+"/cases")
@@ -225,7 +226,7 @@ class Aero():
         cmd_str+=f"case {case.case_file}\n"
         cmd_str+="oper\no\nv\n\nx\n"
 
-        results_file=f"results/{plane.name}-{str(case.alpha)}deg"
+        results_file=f"{self.path}/results/{plane.name}-{str(case.alpha)}deg"
         
         if case.modes==False and case.polars==False:
             raise ValueError("No analysis type defined.")
