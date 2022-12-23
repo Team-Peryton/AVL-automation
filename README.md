@@ -9,7 +9,7 @@ The tail sizing segment has been validated against 2 flying UAVs and, given the 
 > pip install avl_automation
 
 Automation module selection can then be done by:
-> py -m avl_automation.avl_automation
+> py -m avlautomation.avlautomation
 
 Add -h cmd argument for help.
 
@@ -18,6 +18,8 @@ The following are required in the same directory as the config file you specify 
 - Config files (aero, dihedral, and tail).
 - Input plane .avl file (see https://web.mit.edu/drela/Public/web/avl/avl_doc.txt for info (xflr5 can export AVL compatible files).
 - aerofoil .dat files
+
+Note that config files must be input with their full directory e.g. ```py -m avlautomation.avlautomation tail -c ./tail.config``` not ```tail.config```
 
 Some sample scripts (undocumented) for control surface sizing and tail mass are given in /scripts.
 
