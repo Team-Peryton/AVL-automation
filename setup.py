@@ -1,8 +1,9 @@
 from setuptools import setup, find_packages
+from pathlib import Path
 
-VERSION = '0.2'
+VERSION = '1.0'
 DESCRIPTION = "Automation tools for vortex lattice method, AVL"
-LONG_DESCRIPTION = "Automatic tail sizing and dihedral angle investigation made possible through lose wrapping of AVL."
+LONG_DESCRIPTION = (Path(__file__).parent / "README.md").read_text()
 
 # setup
 setup(

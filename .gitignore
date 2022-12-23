@@ -10,3 +10,4 @@ scripts/__pycache__
 scripts/cases
 scripts/generated planes
 scripts/results
+dist
