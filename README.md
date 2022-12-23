@@ -34,9 +34,11 @@ If you get a seemingly random error it's likely because your input .avl plane fi
 The program will generate tail configurations between limits given in the .config file and use AVL to calculate the neutral point of each. It then fits a parametric curve to the datapoints and gives you a nice graph like the one below and interpolates a curve of possible tail configurations.
 
 ![image](https://user-images.githubusercontent.com/79290428/209408913-acb4153b-cd75-48df-861c-d916c2c78f4c.png)
+
 **Fig. 1 - Static margins for tail areas and moment arms of tail configurations assessed.**
 
 ![image](https://user-images.githubusercontent.com/79290428/209408978-c282e850-d69b-4f93-8b3c-6ce1826b8365.png)
+
 **Fig. 2 - Curves of tail configurations with static margins of 0.2.**
 
 The main 3 variables to consider when sizing the horizontal tail for longitudinal static stability are: tail moment arm, tail plane area, and CG position. In short, increasing the moment arm and area increase the longitudinal stability of the aircraft for a given CG because it moves the neutral point away from the CG. The neutral point is the point where, if the CG was placed on it, $C_M/\alpha=0$. Static margin $SM=\frac{x_{np}-x_{cg}}{MAC}$ and should be around 0.1 to 0.3.
