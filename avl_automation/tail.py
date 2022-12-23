@@ -511,7 +511,7 @@ class AutoTail():
                 print(
                     "Consider refining limits around possible configurations.\n")
 
-            print(f"np: {self.Xcg-(self.planes[0].mac*self.sm_ideal)}")
+            print(f"np: {self.Xcg-(self.planes[0].mac*self.sm_ideal)} Lunit")
 
             if display == True:
                 ##### Generated planes SM results (3D plot) #####

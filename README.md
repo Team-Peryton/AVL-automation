@@ -1,4 +1,4 @@
-# AVL-automation
+# AVL Automation
 Surrey Team Peryton Heron IMechE UAS 2022 AVL automation program. Enables automatic tail sizing based on input aircraft geometry, and investigation of dihedral angle effects on stability and aerodynamic performance. 
 
 A lose wrapping of the vortex lattice method [AVL](https://web.mit.edu/drela/Public/web/avl/) provides a means of scripting these tools.
@@ -11,15 +11,15 @@ The tail sizing segment has been validated against 2 flying UAVs and, given the 
 Automation module selection can then be done by:
 > py -m avl_automation.avl_automation
 
-Add -h argument for help.
+Add -h cmd argument for help.
 
 The following are required in the same directory as the config file you specify in the command line (see /example):
 - avl.exe (https://web.mit.edu/drela/Public/web/avl/)
 - Config files (aero, dihedral, and tail).
-- Input plane .avl file (see https://web.mit.edu/drela/Public/web/avl/avl_doc.txt for info; xflr5 can export AVL compatible files).
+- Input plane .avl file (see https://web.mit.edu/drela/Public/web/avl/avl_doc.txt for info (xflr5 can export AVL compatible files).
 - aerofoil .dat files
 
-Some sample scripts (undocumented) are given in /scripts.
+Some sample scripts (undocumented) for control surface sizing and tail mass are given in /scripts.
 
 If you get a seemingly random error it's likely because your input .avl plane file is formatted incorrectly. Raise an issue containing the .avl file and your config file(s) and I'll either fix the code or tell you how to fix your inputs :)
 
@@ -32,16 +32,16 @@ If you get a seemingly random error it's likely because your input .avl plane fi
 The program will generate tail configurations between limits given in the .config file and use AVL to calculate the neutral point of each. It then fits a parametric curve to the datapoints and gives you a nice graph like the one below and interpolates a curve of possible tail configurations.
 
 ![image](https://user-images.githubusercontent.com/79290428/209408913-acb4153b-cd75-48df-861c-d916c2c78f4c.png)
+**Fig. 1 - Static margins for tail areas and moment arms of tail configurations assessed.**
 
 ![image](https://user-images.githubusercontent.com/79290428/209408978-c282e850-d69b-4f93-8b3c-6ce1826b8365.png)
+**Fig. 2 - Curves of tail configurations with static margins of 0.2.**
 
-**Fig. 1 - Static margins for tail areas and moment arms of tail configurations assessed**
-
-The main 3 variables to consider when sizing the horizontal tail for longitudinal static stability are: tail moment arm, tail plane area, and CG position. In short, increasing the moment arm and area increase the longitudinal stability of the aircraft for a given CG because it moves the neutral point away from the CG. The neutral point is the point where, if the CG was placed on it, $C_M/\alpha=0$. Static margin $SM=x_{np}-x_{cg}$ and should be around 0.1 to 0.3.
+The main 3 variables to consider when sizing the horizontal tail for longitudinal static stability are: tail moment arm, tail plane area, and CG position. In short, increasing the moment arm and area increase the longitudinal stability of the aircraft for a given CG because it moves the neutral point away from the CG. The neutral point is the point where, if the CG was placed on it, $C_M/\alpha=0$. Static margin $SM=\frac{x_{np}-x_{cg}}{MAC}$ and should be around 0.1 to 0.3.
 
 ![image](https://user-images.githubusercontent.com/79290428/179372590-fcfc5e14-8e66-4287-8e49-efd22b70ba7f.png)
 
-**Fig. 2 - $C_M/\alpha$ curves for stable, neutral and unstable aircraft.**
+**Fig. 3 - $C_M/\alpha$ curves for stable, neutral and unstable aircraft.**
 
 The tail moment arm is likely restricted in some way because of structural constraints so there is a balance between the tail area and moment arm. Something that would be nice to add to the tail sizing program is calculating the required angle of incidence on the horizontal tail for a desired trim angle, but this can be done fairly easily within AVL itself given a bit of setup in the plane.avl file.
 
@@ -53,7 +53,7 @@ The tail moment arm is likely restricted in some way because of structural const
 
 ![image](https://user-images.githubusercontent.com/79290428/179610350-5d2b92fd-5ed4-42a4-81e1-4591e40f4666.png)
 
-**Fig. 3 - Dihedral angle effect on $C_L$, $C_D$, and stability derivatives.**
+**Fig. 4 - Dihedral angle effect on $C_L$, $C_D$, and stability derivatives.**
 
 ## Aero:
 - Generate some quick aerodynamic coefficient polars, stability derivatives, and eigenmode frequencies and dampings for a range of angles of attack.
