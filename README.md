@@ -13,7 +13,7 @@ Automation module selection can then be done by:
 
 Add -h argument for help.
 
-The following are required in the same directory as the config file you specify in the command line:
+The following are required in the same directory as the config file you specify in the command line (see /example):
 - avl.exe (https://web.mit.edu/drela/Public/web/avl/)
 - Config files (aero, dihedral, and tail).
 - Input plane .avl file (see https://web.mit.edu/drela/Public/web/avl/avl_doc.txt for info; xflr5 can export AVL compatible files).
