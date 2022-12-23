@@ -12,20 +12,27 @@ class Dihedral():
     def __init__(self,dihedral_config_file:str,aero_config_file:str):
 
         #   Clean temp folders.
-        path=os.path.abspath(os.getcwd())
-        try:
-            if os.path.isdir(path+"/results")==True:
-                shutil.rmtree(path+"/results")
-            if os.path.isdir(path+"/generated planes")==True:
-                shutil.rmtree(path+"/generated planes")
-            if os.path.isdir(path+"/cases")==True:
-                shutil.rmtree(path+"/cases")
-        except PermissionError:
-            raise PermissionError("Close all results/geometry/case files !")
+        self.path = os.path.split(dihedral_config_file)[0]
 
-        os.mkdir(path+"/generated planes")
-        os.mkdir(path+"/results")
-        os.mkdir(path+"/cases")
+        try:
+            if os.path.isdir(self.path+"/results")==True:
+                shutil.rmtree(self.path+"/results")
+            if os.path.isdir(self.path+"/generated planes")==True:
+                shutil.rmtree(self.path+"/generated planes")
+            if os.path.isdir(self.path+"/cases")==True:
+                shutil.rmtree(self.path+"/cases")
+        except PermissionError:
+            raise PermissionError("Close all results, geometry, case files")
+
+        os.mkdir(self.path+"/generated planes")
+        os.mkdir(self.path+"/results")
+        os.mkdir(self.path+"/cases")
+        
+
+        if os.path.exists(f"{self.path}/avl.exe")==False:
+            print("\u001b[31m[Error]\u001b[0m avl.exe not found.")
+            exit()
+
 
         self.read_config(dihedral_config_file)
         self.aero_config_file=aero_config_file
@@ -123,7 +130,7 @@ class Dihedral():
             
             #   Writes plane file.
             file_name=name=f"{plane.name}-{theta}deg-{self.span_loc}%"
-            plane.geom_file=f"generated planes/{file_name}.avl"
+            plane.geom_file=f"{self.path}/generated planes/{file_name}.avl"
             with open(plane.geom_file,'w') as file:
                 file.write("".join(mod_geom))
             count+=1
@@ -138,7 +145,7 @@ class Dihedral():
         """
         Runs aero analysis.
         """
-        aero=Aero(self.aero_config_file)    #   initialises aero analysis, reads config file.
+        aero=Aero(self.aero_config_file,self.path)    #   initialises aero analysis, reads config file.
         if aero.polars==False:
             raise ValueError("Polars must be enabled for dihedral analysis.")
 

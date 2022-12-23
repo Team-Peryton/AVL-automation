@@ -56,31 +56,26 @@ Av = 1.8
 D = 136           # ft
 delta_w = 0       # deg   sweep
 delta_h = 0       # deg
-delta_v = 0       # deg
-Fw = 5.5          # ft
+delta_v = 33       # deg
+Fw = 5.67          # ft
 HtHv = 1
 Kdoor = 1
 Klg = 1.12
 Kuht = 1
 lambda_w = 0.4    # taper ratio
-Nz = 4.5
-Sf = 2294.3       # ft^2
+Nz = 3
+Sf = 3.51E+03 # ft^2
 tc = 0.12
-Wdg = 65506.31498  # lb
-Xw = 11.178       # m
+Wdg = 66138.6  # lb
 
-Lcb = 455             # in
-Lf = 2.02*39.3701     # in
-Lcp = 157             # in
-Lg = 14               # in
-Lep = 56              # in
-Lb = (Lcb+Lf+Lcp+Lg+Lep)*0.083    # ft
+Lb = 19.354*0.083    # ft
 
-tail = AutoTail("../projects/tail_MDDP_v0.config")
+tail = AutoTail("../projects/tail_MDDP_v1.config")
 tail.generate_planes()
 tail.run()
 _, curve_fit = tail.results(display=False)
 Lts, St_hs, St_vs = curve_fit.curve_fit_slice()
+Xts=curve_fit.Lt_to_Xt(Lts) # m
 
 mass_v = []
 mass_h = []
@@ -115,9 +110,15 @@ for i, _ in enumerate(Lts):
 
     mass_total.append(mass_h[i]+mass_v[i]+mass_f[i])
 
-# export results
+mass_total=np.array(mass_total)
+mass_f=np.array(mass_f)
+mass_h=np.array(mass_h)
+mass_v=np.array(mass_v)
+
+# print results
 res=pd.DataFrame(columns=["Lt","Sh","Sv","mass_h","mass_v","mass_f","mass_total"])
 res["Lt"]=Lts
+res["Xt"]=Xts
 res["Sh"]=St_hs
 res["Sv"]=St_vs
 res["mass_h"]=mass_h
@@ -125,14 +126,15 @@ res["mass_v"]=mass_v
 res["mass_f"]=mass_f
 res["mass_total"]=mass_total
 
-#res.to_csv("mass_results.csv")
+print(res.iloc[res["mass_total"].idxmin()])
 
 # plotting
-
 fig, ax1, _ = curve_fit.plot_slice(Lts, St_hs, St_vs)
 ax2 = ax1.twinx()
 
-ax2.plot(Lts, mass_total, linestyle='-.', color='k')
+ax2.plot(Lts, mass_total, linestyle='--', color='k')
+# ax2.plot(Lts,mass_h+mass_v,linestyle=':',color='k')
+# ax2.plot(Lts,mass_f,linestyle='-.',color='k')
 ax2.set_ylabel("Tail + Fuselage Mass (kg)")
 
 plt.show()

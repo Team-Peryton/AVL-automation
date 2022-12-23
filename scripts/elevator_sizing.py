@@ -2,8 +2,8 @@ import numpy as np
 from pandas import read_csv
 import matplotlib.pyplot as plt
 
-from tail_sizing import AutoTail
-from scripts.plain_flap_chord import Iterate
+from avl_automation.tail import AutoTail
+from plain_flap_chord import Iterate
 
 #### general parameters ####
 Vstall = 55.03
@@ -26,27 +26,20 @@ mac_w = 3.106  # m
 AR_h = 5
 
 mass = 30000  # kg
-x_cg = 11.86  # m
-x_mg = 13.39       # main gear m
-z_mg = -2.761
+x_cg = 13.603  # m
+x_mg = 15.03       # main gear m
+z_mg = -2.81
 z_D = 0
 z_T = 1.487   # m
 # z_T=0
-z_cg = 0.316
+z_cg = 0.6
 
-Ry = 0.34
-Lcb = 455             # in
-Lf = 2.02*39.3701     # in
-Lcp = 157             # in
-Lg = 14               # in
-Lep = 56              # in
-Lb = (Lcb+Lf+Lcp+Lg+Lep)*0.083    # ft
-Lb_m = Lb*3.281**-1   # m
+Iyy = 1359617.415  # kg/m2
 
 #### elevator parameters ####
 ddtheta = 10  # deg/s/s (rotation acceleration)
 span_ratio = 0.9
-angle = 30    # deg
+angle = 35    # deg
 sweep = 0
 
 #### initial calcs ####
@@ -59,7 +52,7 @@ friction = rolling_resistance*(Lto-W)
 acceleration = (thrust-D-np.abs(friction))/mass
 
 #### analysis stuff ####
-tail = AutoTail("projects/tail_MDDP_v0.config")
+tail = AutoTail("../projects/tail_MDDP_v1.config")
 tail.generate_planes()
 tail.run()
 _, curve_fit = tail.results(display=False)
@@ -69,7 +62,7 @@ Lt, St_h, St_v = curve_fit.curve_fit_slice()
 plane = curve_fit.planes[0]
 x_ac_w = plane.Xw_root+0.25*mac_w
 
-kf_data = read_csv("scripts/Kf_plot.csv")
+kf_data = read_csv("Kf_plot.csv")
 chord_ratio_initial = 0.3
 convergence = 0.005
 
@@ -78,12 +71,6 @@ chord_ratios = []
 for i, _ in enumerate(Lt):
     Xt = curve_fit.Lt_to_Xt(Lt[i])
     MAC_h = np.sqrt(St_h[i]/AR_h)
-
-    L_emp_m = (Xt-Lb_m)+MAC_h  # m
-    L_fuselage = Lb_m+L_emp_m
-    Iyy = ((L_fuselage*3.281)**2*W*Ry**2)/(4*9.81)    # about cg?
-    # print(L_fuselage,Iyy)
-    Iyy = 879000  # kg/m2
 
     x_ac_h = Xt+0.25*MAC_h
 
@@ -101,9 +88,16 @@ for i, _ in enumerate(Lt):
                     np.deg2rad(ddtheta))/(x_ac_h-x_mg))
     Clh = Lift_h/(0.5*1.225*St_h[i]*Vr**2)
 
-    r = iterate(chord_ratio_initial, convergence,
-                angle, kf_data, Clh, span_ratio, sweep)
-    chord_ratios.append(r[-1])
+    try:
+        r = iterate(chord_ratio_initial, convergence,
+                    angle, kf_data, Clh, span_ratio, sweep)
+        chord_ratios.append(r[-1])
+    except ValueError:
+        print(
+            f"\u001b[33m[Warning]\u001b[0m Cl too high: {round(Clh,3)}. No possible elevator configuration.")
+
+        chord_ratios.append(np.NaN)
+        #print(f"L={round(Lift_h,2)}")
 
 fig, ax1, _ = curve_fit.plot_slice(Lt, St_h, St_v)
 ax2 = ax1.twinx()
@@ -111,5 +105,4 @@ ax2 = ax1.twinx()
 ax2.plot(Lt, chord_ratios, linestyle='--', color='r')
 ax2.set_ylabel("cf/c")
 
-print(chord_ratios)
 plt.show()
