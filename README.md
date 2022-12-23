@@ -6,37 +6,35 @@ A lose wrapping of the vortex lattice method [AVL](https://web.mit.edu/drela/Pub
 The tail sizing segment has been validated against 2 flying UAVs and, given the CG is in the right place, suggests perfectly stable tail configurations.
 
 ## Usage
-1. Install python (tested on 3.9.5)
-2. Install packages in requirements.txt
-   >pip install -r requirements.txt
-3. Run avl-automation.py from the command line. For help:
-   >py avl-automation.py -h
-   
-The following are required in the same directory as avl-automation.py:
+> pip install avl_automation
+
+Automation module selection can then be done by:
+> py -m avl_automation.avl_automation
+
+Add -h argument for help.
+
+The following are required in the same directory as the config file you specify in the command line:
 - avl.exe (https://web.mit.edu/drela/Public/web/avl/)
 - Config files (aero, dihedral, and tail).
 - Input plane .avl file (see https://web.mit.edu/drela/Public/web/avl/avl_doc.txt for info; xflr5 can export AVL compatible files).
 - aerofoil .dat files
-   
+
+Some sample scripts (undocumented) are given in /scripts.
+
 If you get a seemingly random error it's likely because your input .avl plane file is formatted incorrectly. Raise an issue containing the .avl file and your config file(s) and I'll either fix the code or tell you how to fix your inputs :)
 
 ## Tail Sizing
 - Suggests tail configurations based on input geometry to achieve a desired static margin.
 - Works for convensional & V-tail configurations.
 - Can be run in reverse i.e. input tail dimensions & output optimal CG location
-- Anslysis considers only the horizontal tail plane (if convensional tail is selected). Vertical tail plane should be sized independently based on rudder and yaw stability requirements.
+- Anslysis considers only the horizontal tail plane (if convensional tail is selected). Vertical tail plane should be sized independently based on rudder and yaw stability requirements (a vertical tale will be generated but only based on a given vertical tail volume coefficient).
 
-The program will generate tail configurations between limits given in the .config file and use AVL to calculate the neutral point of each. It then gives you a nice graph like the one below and prints possible tail configurations.
+The program will generate tail configurations between limits given in the .config file and use AVL to calculate the neutral point of each. It then fits a parametric curve to the datapoints and gives you a nice graph like the one below and interpolates a curve of possible tail configurations.
 
 ![image](https://user-images.githubusercontent.com/79290428/179372168-712e726d-9805-4b63-bebe-51a15cef5054.png)
 
 **Fig. 1 - Static margins for tail areas and moment arms of tail configurations assessed**
-```
-Plane ID  Static Margin  Xnp (mm)  Xt (mm)  Span (mm)  Chord (mm)
-     80           0.30     493.1   1000.0      801.0       150.0
-     91           0.29     491.0   1062.0      731.0       137.0
-     92           0.31     496.0   1124.0      731.0       137.0
-```
+
 The main 3 variables to consider when sizing the horizontal tail for longitudinal static stability are: tail moment arm, tail plane area, and CG position. In short, increasing the moment arm and area increase the longitudinal stability of the aircraft for a given CG because it moves the neutral point away from the CG. The neutral point is the point where, if the CG was placed on it, $C_M/\alpha=0$. Static margin $SM=x_{np}-x_{cg}$ and should be around 0.1 to 0.3.
 
 ![image](https://user-images.githubusercontent.com/79290428/179372590-fcfc5e14-8e66-4287-8e49-efd22b70ba7f.png)

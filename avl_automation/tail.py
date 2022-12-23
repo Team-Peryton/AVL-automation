@@ -510,7 +510,7 @@ class AutoTail():
             if curve_fit.unstable==False:
                 print(
                     "Consider refining limits around possible configurations.\n")
-            print(self.planes[0].mac)
+
             print(f"np: {self.Xcg-(self.planes[0].mac*self.sm_ideal)}")
 
             if display == True:

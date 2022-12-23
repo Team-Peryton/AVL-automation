@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-VERSION = '0.1'
+VERSION = '0.2'
 DESCRIPTION = "Automation tools for vortex lattice method, AVL"
 LONG_DESCRIPTION = "Automatic tail sizing and dihedral angle investigation made possible through lose wrapping of AVL."
 
