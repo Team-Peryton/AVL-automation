@@ -31,7 +31,9 @@ If you get a seemingly random error it's likely because your input .avl plane fi
 
 The program will generate tail configurations between limits given in the .config file and use AVL to calculate the neutral point of each. It then fits a parametric curve to the datapoints and gives you a nice graph like the one below and interpolates a curve of possible tail configurations.
 
-![image](https://user-images.githubusercontent.com/79290428/179372168-712e726d-9805-4b63-bebe-51a15cef5054.png)
+![image](https://user-images.githubusercontent.com/79290428/209408913-acb4153b-cd75-48df-861c-d916c2c78f4c.png)
+
+![image](https://user-images.githubusercontent.com/79290428/209408920-a47605b4-ae8c-477d-85cf-61695c415dcc.png)
 
 **Fig. 1 - Static margins for tail areas and moment arms of tail configurations assessed**
 
