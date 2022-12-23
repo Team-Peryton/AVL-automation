@@ -33,7 +33,7 @@ The program will generate tail configurations between limits given in the .confi
 
 ![image](https://user-images.githubusercontent.com/79290428/209408913-acb4153b-cd75-48df-861c-d916c2c78f4c.png)
 
-![image](https://user-images.githubusercontent.com/79290428/209408920-a47605b4-ae8c-477d-85cf-61695c415dcc.png)
+![image](https://user-images.githubusercontent.com/79290428/209408978-c282e850-d69b-4f93-8b3c-6ce1826b8365.png)
 
 **Fig. 1 - Static margins for tail areas and moment arms of tail configurations assessed**
 
