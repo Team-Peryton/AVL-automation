@@ -6,7 +6,7 @@ A lose wrapping of the vortex lattice method [AVL](https://web.mit.edu/drela/Pub
 The tail sizing segment has been validated against 2 flying UAVs and, given the CG is in the right place, suggests perfectly stable tail configurations.
 
 ## Usage
-> pip install avl_automation
+> pip install avlautomation
 
 Automation module selection can then be done by:
 > py -m avlautomation.avlautomation
