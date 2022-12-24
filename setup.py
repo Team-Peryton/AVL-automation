@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 from pathlib import Path
 
-VERSION = '1.0.1'
+VERSION = '1.0.2'
 DESCRIPTION = "Automation tools for vortex lattice method, AVL"
 LONG_DESCRIPTION = (Path(__file__).parent / "README.md").read_text()
 
@@ -14,7 +14,7 @@ setup(
     long_description=LONG_DESCRIPTION,
     long_description_content_type="text/markdown",
     url="https://github.com/Team-Peryton/AVL-automation",
-    packages=find_packages("avl_automation"),
+    packages=find_packages(),
     install_requires=["numpy","scipy","pandas","matplotlib","tqdm"],
     python_requires='>=3.9'
 )
