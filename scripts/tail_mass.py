@@ -2,8 +2,6 @@
 Script to estimate mass of auto-tail configs. 
 Empirical relations for mass estimation from 'Aircraft Design: A Conceptual Approach'
     by Raymer (2018) used (section on weight estimation).
-
-Run as python module.
 """
 
 import pandas as pd
