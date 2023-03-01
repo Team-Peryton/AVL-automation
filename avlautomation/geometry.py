@@ -1,3 +1,5 @@
+from pathlib import Path
+
 class KeyErrorMessage(str):
     def __repr__(self): return str(self)
 
@@ -47,7 +49,7 @@ class Plane():
 
         return None
 
-    def read(self,file:str):
+    def read(self,file: Path):
         """
         Loads AVL plane file.
 
