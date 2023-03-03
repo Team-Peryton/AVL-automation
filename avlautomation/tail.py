@@ -1,5 +1,6 @@
 import copy
 import os
+from pathlib import Path
 import shutil
 from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
@@ -7,26 +8,27 @@ from uuid import uuid4
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d.axes3d import Axes3D
 from tqdm import tqdm
 
 from avlautomation.aero import Case, avl_cmd
-from avlautomation.config import TailConfig, TailConfigSpanFind
+from avlautomation.config import TailConfig
 from avlautomation.curvefit import CurveFit
 from avlautomation.geometry import Plane, Section
 
 
 class AutoTail():
-    def __init__(self, config: TailConfig | TailConfigSpanFind):
+    def __init__(self, config: TailConfig):
         self.config = config
         try:
             path = self.config.path.joinpath
-            shutil.rmtree(path("/results")) if os.path.isdir(path("/results")) else None
-            shutil.rmtree(path("/generated planes")) if os.path.isdir(path("/generated planes")) else None
-            shutil.rmtree(path("/cases")) if os.path.isdir(path("/cases")) else None
+            shutil.rmtree(path("results")) if os.path.isdir(path("results")) else None
+            shutil.rmtree(path("generated planes")) if os.path.isdir(path("generated planes")) else None
+            shutil.rmtree(path("cases")) if os.path.isdir(path("cases")) else None
         except PermissionError:
             raise PermissionError("Close all results, geometry, case files")
 
-        map(os.mkdir, map(self.config.path.joinpath, ["/generated planes", "/results", "/cases"]))
+        list(map(os.mkdir, map(path, ["generated planes", "results", "cases"])))
         
         if os.path.exists(f"{self.config.path}/avl.exe")==False:
             raise Exception("\u001b[31m[Error]\u001b[0m avl.exe not found.")
@@ -100,7 +102,7 @@ class AutoTail():
                 mod_geom.insert(index, mod_str)
 
         file_name = f"{plane.name}-{str(round(St_h,2))}Sh-{str(round(plane.Lt,2))}Lt"
-        plane.geom_file = f"{self.config.path}/generated planes/{file_name}.avl"
+        plane.geom_file = Path(f"{self.config.path}/generated planes/{file_name}.avl")
 
         with open(plane.geom_file, 'w') as file:
             file.write("".join(mod_geom))
@@ -119,11 +121,11 @@ class AutoTail():
         try:
             self.ref_plane.strip_section("Elevator")
         except KeyError:
-            print("\u001b[33m[Warning]\u001b[0m No section 'Elevator' found. Check if geometry of generated planes looks correct.")
+            raise Exception("\u001b[33m[Warning]\u001b[0m No section 'Elevator' found. Check if geometry of generated planes looks correct.")
         try:
             self.ref_plane.strip_surface("Fin")
         except KeyError:
-            print("\u001b[33m[Warning]\u001b[0m No surface 'Fin' found. Check if geometry of generated planes looks correct.")
+            raise Exception("\u001b[33m[Warning]\u001b[0m No surface 'Fin' found. Check if geometry of generated planes looks correct.")
 
         self.planes = [self.generate_plane(St_h, Xt) for Xt in self.Xt_range for St_h in self.St_h_range]
 
@@ -271,7 +273,7 @@ class AutoTail():
 
             if display == True:
                 fig = plt.figure()
-                ax = fig.add_subplot(projection='3d')
+                ax:Axes3D = fig.add_subplot(projection='3d')
 
                 x = [plane.St_h for plane in self.planes]
                 y = [plane.Lt for plane in self.planes]

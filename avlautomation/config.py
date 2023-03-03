@@ -1,5 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+
 
 @dataclass
 class Solver:
@@ -12,7 +13,7 @@ class Solver:
 
 
 @dataclass
-class Plane(Solver):
+class PlaneConfig(Solver):
     """
     Core aircraft attributes widely used across solvers
     """
@@ -28,13 +29,13 @@ class Plane(Solver):
 
 
 @dataclass
-class TailConfig(Plane):
+class TailConfig(PlaneConfig):
     """
     Tail solver specifics
     """
     # Solver inputs
-    Xt_upper: float     # lever arm distance 
-    Xt_lower: float     # lever arm distance
+    Xt_upper: float     # leading edge distance
+    Xt_lower: float     # leading edge distance
     St_h_upper: float   # Equivilent horizontal tail area
     St_h_lower: float   # Equivilent horizontail tail area
     Ct_v: float         # Equivilent vertical tail area
@@ -48,15 +49,7 @@ class TailConfig(Plane):
 
 
 @dataclass
-class TailConfigSpanFind(TailConfig):
-    """
-    Used when tail span is known but the CG position is to be found
-    """
-    horz_tail_span: float
-
-
-@dataclass
-class DihedralConfig(Plane):
+class DihedralConfig(PlaneConfig):
     """
     
     """

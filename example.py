@@ -6,7 +6,7 @@ for i in [0,0.1,0.2,0.3]:
     tail_config = TailConfig(
         threads=8,
         steps=7,
-        path=Path("./"),
+        path=Path("."),
         input_plane=Path("Aria3.avl"),
         wing_aerofoil=Path("NACA_2412.dat"),
         elevator_aerofoil=Path("NACA_0012H.dat"),
