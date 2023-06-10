@@ -11,3 +11,13 @@ scripts/cases
 scripts/generated planes
 scripts/results
 dist
+results
+generated planes
+build
+cases
+*.dat
+*.exe
+/*.avl
+/*.config
+.mypy_cache
+.vscode

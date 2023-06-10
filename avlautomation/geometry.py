@@ -1,53 +1,47 @@
-class KeyErrorMessage(str):
-    def __repr__(self): return str(self)
-
+from pathlib import Path
 
 class Plane():
-    def __init__(self,name:str=None,geom_file=None):
+    def __init__(self,name:str, geom_file=Path()):
 
         self.name=name
         self.geom_file=geom_file
-        self.results_file=None
-        self.Xcg=None
-        self.np=None
-        self.sm=None
-        self.sm_ideal=None
-        self.Xt=None
-        self.Lt=None
-        self.Sw=None
-        self.Ct_v=None
-        self.St_h=None  #   Equivilent horizontal tail area
-        self.St_v=None  #   Equivilent vertical tail area
-        self.mac=None
-        self.ARh=None
-        self.ARv=None
-        self.dihedral_angle=None
-        self.dihedral_split=None
-        self.dihedral_splitY=None
-        self.tipY=None
-        self.tipZ=None
-        self.Xle=None
-        self.cases=None
-        self.polars=None
-        self.modes=None
-        self.tail_config=None
-        self.b_w=None
-        self.b_th=None
-        self.b_tv=None
-        self.c_t=None
-        self.theta=None
-        self.Xw_root=None
-        self.Cw_root=None
-
-        if self.name==None:
-            self.name="plane"
-
-        if geom_file!=None:
+        self.results_file=Path()
+        self.Xcg=0.0
+        self.np=0.0
+        self.sm=0.0
+        self.sm_ideal=0.0
+        self.Xt=0.0
+        self.Lt=0.0
+        self.Sw=0.0
+        self.Ct_v=0.0
+        self.St_h=0.0  #   Equivilent horizontal tail area
+        self.St_v=0.0  #   Equivilent vertical tail area
+        self.mac=0.0
+        self.ARh=0.0
+        self.ARv=0.0
+        self.dihedral_angle=0.0
+        self.dihedral_split=0.0
+        self.dihedral_splitY=0.0
+        self.tipY=0.0
+        self.tipZ=0.0
+        self.Xle=""
+        self.cases=0.0
+        self.polars=0.0
+        self.modes=0.0
+        self.tail_config=0.0
+        self.b_w=0.0
+        self.b_th=0.0
+        self.b_tv=0.0
+        self.c_t=0.0
+        self.theta=0.0
+        self.Xw_root=0.0
+        self.Cw_root=0.0
+        
+        if geom_file!=Path():
             self.read(geom_file)
-
         return None
 
-    def read(self,file:str):
+    def read(self,file: Path):
         """
         Loads AVL plane file.
 
@@ -73,11 +67,11 @@ class Plane():
 
             if line.strip()=="Main Wing":
                 wing=True
+            
             if line.split()[0]=="SECTION" and wing==True:
                 Xle=lines[i+1].split()[0]
-                wing=False
-
-        self.Xle=Xle
+                wing=False 
+                self.Xle=Xle
 
         ref_dims=[n for n in file_str][3]
         self.Sw=float(ref_dims.split()[0])
@@ -89,22 +83,19 @@ class Plane():
 
         ### Get wing LE x location
         surface=False
-        section=False
         found=False
         for i,line in enumerate(self.file_str):
             if line.strip()=="Main Wing":
                 found=True
                 surface=True
             if line.split()[0]=="SECTION" and surface==True:
-                section=True
                 self.Xw_root=float(self.file_str[i+1].strip().split()[0])
                 self.Cw_root=float(self.file_str[i+1].strip().split()[3])
 
                 break
 
         if found!=True:
-            msg=KeyErrorMessage("Wing surface not found. Wing should be defined by:\n\tSURFACE\n\tMain Wing\n\t...")
-            raise KeyError(msg)
+            raise KeyError("Wing surface not found. Wing should be defined by:\n\tSURFACE\n\tMain Wing\n\t...")
 
         return None
 
@@ -224,6 +215,7 @@ TRANSLATE
 
         return self.Xcg
 
+
 class Surface():
     #Creates surface (eg wing type)
     def __init__(self,name,nchord,cspace,component,aerofoil,y_duplicate=None,angle=None):
@@ -251,6 +243,7 @@ class Surface():
 
         return surf_str
 
+
 class Section():
     def __init__(self,Xle,Yle,Zle,chord,nspan,sspace,aerofoil):
         self.Xle=Xle
@@ -268,5 +261,6 @@ class Section():
 
         return section_str
 
+
 if __name__=="__main__":
-    plane=Plane('aria3','Aria3.avl')
+    plane=Plane('aria3')

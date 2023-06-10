@@ -1,13 +1,16 @@
-import subprocess as sp
-import numpy as np
-from concurrent.futures import ThreadPoolExecutor
-import pandas as pd
 import os
 import shutil
+import subprocess as sp
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
 
 from .geometry import Plane
 
-def avl_cmd(cmd_str:str,path:str)->None:
+
+def avl_cmd(cmd_str:str,path: Path)->None:
     """
     Opens AVL in a subprocess and submits command string.
 
